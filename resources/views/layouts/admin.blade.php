@@ -6,6 +6,7 @@
     <meta name="theme-color" content="#6b2bda">
     <title>@yield('title', 'Admin Dashboard') · E-Novaz Admin</title>
     @vite(['resources/css/app.css','resources/js/app.js'])
+    @stack('styles')
     <style>
         /* Reset any potential conflicts */
         .admin-layout * {

@@ -3,6 +3,24 @@
 @section('page-title', 'Dashboard')
 @section('breadcrumb', 'Overview & Statistics')
 
+@push('styles')
+<style>
+    /* Force icon container sizes */
+    .bg-blue-100, .bg-green-100, .bg-purple-100, .bg-red-100 {
+        width: 48px !important;
+        height: 48px !important;
+        flex-shrink: 0;
+    }
+    
+    /* Force SVG sizes in stats cards */
+    .bg-blue-100 svg, .bg-green-100 svg, .bg-purple-100 svg, .bg-red-100 svg {
+        width: 32px !important;
+        height: 32px !important;
+        display: block;
+    }
+</style>
+@endpush
+
 @section('content')
 <!-- Stats Cards -->
 <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
