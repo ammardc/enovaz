@@ -1,0 +1,63 @@
+# Gunakan file ini untuk override docker-compose.yml di production
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+version: '3.8'
+
+services:
+  app:
+    restart: always
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+    volumes:
+      - ./storage:/var/www/html/storage:rw
+      - ./bootstrap/cache:/var/www/html/bootstrap/cache:rw
+      # Mount code as read-only in production
+      - ./:/var/www/html:ro
+
+  db:
+    restart: always
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --default-storage-engine=InnoDB
+      --innodb-buffer-pool-size=256M
+      --max-connections=200
+      --query-cache-type=0
+    volumes:
+      - db-data-prod:/var/lib/mysql
+    # Don't expose port in production (use internal network only)
+    ports: []
+
+  redis:
+    restart: always
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-changeme}
+    volumes:
+      - redis-data-prod:/data
+    # Don't expose port in production
+    ports: []
+
+  queue:
+    restart: always
+    deploy:
+      replicas: 2  # Run 2 queue workers for redundancy
+
+  scheduler:
+    restart: always
+
+  nginx:
+    restart: always
+    # In production, use port 80 and setup reverse proxy/load balancer
+    ports:
+      - "80:80"
+
+  # Remove MailHog in production (use real SMTP)
+  mailhog:
+    profiles:
+      - donotstart
+
+volumes:
+  db-data-prod:
+    driver: local
+  redis-data-prod:
+    driver: local

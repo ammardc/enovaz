@@ -2,6 +2,36 @@
 
 Toko produk digital berbasis Laravel 12, Blade, Tailwind/Vite, dan database. Tampilan mengikuti pola referensi mobile yang diberikan: katalog dua kolom, chip kategori, kartu saldo, serta navigasi Shop · Orders · Wallet. Produk awal adalah **ChatGPT Plus** dan **Gemini Pro**. Keduanya disimpan sebagai contoh **Segera hadir**, tanpa harga dan stok nyata.
 
+## 🐳 Quick Start dengan Docker (Recommended)
+
+**Untuk development tim dan production deployment, gunakan Docker:**
+
+```bash
+# Clone repository
+git clone https://github.com/ammardc/enovaz.git
+cd enovaz
+
+# Setup (otomatis install dependencies, migrate, build)
+bash docker/setup.sh
+
+# Akses aplikasi
+# Web: http://localhost:8000
+# MailHog: http://localhost:8025
+```
+
+**Dokumentasi lengkap**: Lihat [DOCKER.md](DOCKER.md)
+
+**Commands helper**:
+```bash
+bash docker/commands.sh help        # Lihat semua commands
+bash docker/commands.sh up          # Start containers
+bash docker/commands.sh artisan migrate
+bash docker/commands.sh test
+bash docker/commands.sh owner email@domain.com
+```
+
+---
+
 ## Status saat ini
 
 - Katalog, pencarian, filter, detail produk, akun email dengan verifikasi/reset, Google OAuth melalui Socialite, Orders, Wallet, top up QRIS, checkout saldo/QRIS, pengiriman stok terenkripsi, refund, dan panel admin sudah memiliki alur kode.
@@ -10,7 +40,9 @@ Toko produk digital berbasis Laravel 12, Blade, Tailwind/Vite, dan database. Tam
 - Data paket, harga, stok yang berhak dijual, kebijakan final, SMTP, Google OAuth, Telegram resmi, dan hosting produksi belum tersedia. Jangan menyalakan penjualan sebelum seluruhnya diisi dan diuji.
 - Bagian PRD yang masih perlu dilengkapi sebelum klaim rilis penuh: undangan/izin admin granular dan pengelolaan sesi, kebijakan refund parsial, backup/restore teruji, pengukuran performa nyata, pengujian konkurensi di MySQL, serta uji browser seluruh status yang diminta. Dashboard listener Casaku masih memerlukan validasi respons merchant nyata.
 
-## Menjalankan lokal di Windows + XAMPP
+## Alternative: Menjalankan lokal tanpa Docker (Windows + XAMPP)
+
+**Catatan**: Untuk kolaborasi tim, sangat direkomendasikan menggunakan Docker (lihat bagian di atas).
 
 Gunakan PHP 8.2+ dengan `pdo_sqlite`/`pdo_mysql`, OpenSSL, mbstring, fileinfo, ZIP, dan GD. Composer lokal yang diunduh saat pembuatan ada di `../composer.phar`.
 

@@ -1,0 +1,139 @@
+version: '3.8'
+
+services:
+  # PHP-FPM + Nginx
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: enovaz-app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+      - ./storage:/var/www/html/storage
+      - ./bootstrap/cache:/var/www/html/bootstrap/cache
+    networks:
+      - enovaz-network
+    depends_on:
+      - db
+      - redis
+    environment:
+      - APP_ENV=${APP_ENV:-local}
+      - APP_DEBUG=${APP_DEBUG:-true}
+      - DB_HOST=db
+      - DB_DATABASE=${DB_DATABASE:-enovaz}
+      - DB_USERNAME=${DB_USERNAME:-enovaz}
+      - DB_PASSWORD=${DB_PASSWORD:-secret}
+      - REDIS_HOST=redis
+      - QUEUE_CONNECTION=redis
+      - CACHE_STORE=redis
+      - SESSION_DRIVER=redis
+
+  # MariaDB Database
+  db:
+    image: mariadb:11.2
+    container_name: enovaz-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-enovaz}
+      MYSQL_USER: ${DB_USERNAME:-enovaz}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootsecret}
+    volumes:
+      - db-data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "3306:3306"
+    networks:
+      - enovaz-network
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --default-storage-engine=InnoDB
+
+  # Redis for cache, queue, sessions
+  redis:
+    image: redis:7-alpine
+    container_name: enovaz-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - enovaz-network
+    volumes:
+      - redis-data:/data
+
+  # Queue Worker
+  queue:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: enovaz-queue
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+    networks:
+      - enovaz-network
+    depends_on:
+      - db
+      - redis
+    command: php artisan queue:work --tries=3 --timeout=90
+
+  # Scheduler
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: enovaz-scheduler
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+    networks:
+      - enovaz-network
+    depends_on:
+      - db
+      - redis
+    command: >
+      sh -c "while true; do
+        php artisan schedule:run --verbose --no-interaction;
+        sleep 60;
+      done"
+
+  # Nginx (standalone for production-like setup)
+  nginx:
+    image: nginx:alpine
+    container_name: enovaz-nginx
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    volumes:
+      - ./:/var/www/html
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - enovaz-network
+    depends_on:
+      - app
+
+  # MailHog for local email testing
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: enovaz-mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Web UI
+    networks:
+      - enovaz-network
+
+networks:
+  enovaz-network:
+    driver: bridge
+
+volumes:
+  db-data:
+    driver: local
+  redis-data:
+    driver: local
