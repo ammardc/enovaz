@@ -7,10 +7,24 @@
     <title>@yield('title', 'Admin Dashboard') · E-Novaz Admin</title>
     @vite(['resources/css/app.css','resources/js/app.js'])
     <style>
+        /* Reset any potential conflicts */
+        .admin-layout * {
+            position: relative;
+        }
+        
         .admin-layout {
             display: flex;
             min-height: 100vh;
             background: #f9fafb;
+            position: relative;
+        }
+        
+        /* Hide any large background images in admin */
+        .admin-layout::before,
+        .admin-layout::after,
+        .admin-content::before,
+        .admin-content::after {
+            display: none !important;
         }
         
         .admin-sidebar {
@@ -180,6 +194,15 @@
         .admin-content {
             padding: 32px;
             max-width: 1400px;
+            position: relative;
+            z-index: 1;
+            background: transparent;
+        }
+        
+        /* Ensure cards are visible */
+        .admin-content > * {
+            position: relative;
+            z-index: 2;
         }
         
         .admin-logout-btn {
