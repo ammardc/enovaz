@@ -1,22 +1,169 @@
 @extends('layouts.app')
 @section('title','Shop')
 @section('content')
-<div class="catalog-heading"><h1>Produk</h1></div>
-@auth
-<div class="balance-card"><div><span>Saldo</span><strong>Rp{{ number_format($balance ?? 0,0,',','.') }}</strong></div><a href="{{ route('wallet.topup') }}">Top up saldo</a></div>
-@endauth
-<div class="toolbar catalog-toolbar" id="catalog-search"><form class="search-form" action="{{ route('shop') }}" method="get" role="search">@include('partials.icon',['name'=>'search'])<input name="q" value="{{ request('q') }}" type="search" placeholder="Cari produk" aria-label="Cari produk">@if(request('kategori'))<input type="hidden" name="kategori" value="{{ request('kategori') }}">@endif</form></div>
-<div class="chips" aria-label="Kategori produk"><a class="chip {{ !request('kategori') ? 'active' : '' }}" href="{{ route('shop',array_filter(['q'=>request('q')])) }}">Semua</a>@foreach($categories as $category)<a class="chip {{ request('kategori') === $category->slug ? 'active' : '' }}" href="{{ route('shop',array_filter(['kategori'=>$category->slug,'q'=>request('q')])) }}">{{ $category->name }}</a>@endforeach</div>
-<div class="product-grid" style="margin-top:16px">
-@forelse($products as $product)
-<a class="product-card" href="{{ route('products.show',$product->slug) }}" aria-label="Lihat {{ $product->name }}">
-    <div class="product-art {{ $product->media_path ? 'has-photo' : ($product->art_theme === 'sky' ? 'sky' : 'violet') }} {{ in_array($product->slug, ['chatgpt-plus', 'gemini-pro', 'claude', 'grok', 'youtube', 'spotify', 'duolingo', 'capcut'], true) ? 'photo-cover' : '' }}">
-        <span class="badge">{{ $product->status === 'coming_soon' ? 'SEGERA HADIR' : ($product->badge ?: 'DIGITAL') }}</span>
-        @if($product->media_path)<img class="product-photo" src="{{ asset($product->media_path) }}" alt="" loading="lazy">@else<div class="art-panel"><span>{{ $product->art_theme === 'sky' ? 'G' : '✦' }}</span></div>@endif
+<div class="page-shell">
+    <div class="max-w-7xl mx-auto">
+        <!-- Page Header -->
+        <div class="mb-12">
+            <h1 class="text-4xl font-bold text-gray-900 mb-2">Produk Digital</h1>
+            <p class="text-lg text-gray-600">Koleksi produk digital terbaik untuk kebutuhan Anda</p>
+        </div>
+
+        <!-- Balance Card (Auth Only) -->
+        @auth
+            <x-card hoverable class="mb-8 bg-gradient-to-r from-[#6b2cdd] to-[#8b5cf6] text-white">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-white/80 mb-1">Saldo Anda</p>
+                        <h3 class="text-3xl font-bold">Rp{{ number_format($balance ?? 0,0,',','.') }}</h3>
+                    </div>
+                    <x-button variant="secondary" href="{{ route('wallet.topup') }}" class="bg-white text-[#6b2cdd] hover:bg-gray-100">
+                        Top up Saldo
+                    </x-button>
+                </div>
+            </x-card>
+        @endauth
+
+        <!-- Search & Filter Section -->
+        <div class="mb-8 space-y-6">
+            <!-- Search Form -->
+            <form class="search-form" action="{{ route('shop') }}" method="get" role="search">
+                <div class="flex gap-2">
+                    <x-input
+                        name="q"
+                        type="search"
+                        placeholder="Cari produk digital..."
+                        value="{{ request('q') }}"
+                        class="flex-1"
+                    />
+                    <x-button variant="primary" type="submit">
+                        Cari
+                    </x-button>
+                </div>
+                @if(request('kategori'))
+                    <input type="hidden" name="kategori" value="{{ request('kategori') }}">
+                @endif
+            </form>
+
+            <!-- Category Filter -->
+            <div class="flex flex-wrap gap-2">
+                <x-button
+                    variant="{{ !request('kategori') ? 'primary' : 'secondary' }}"
+                    size="sm"
+                    href="{{ route('shop',array_filter(['q'=>request('q')])) }}"
+                >
+                    Semua Kategori
+                </x-button>
+
+                @foreach($categories as $category)
+                    <x-button
+                        variant="{{ request('kategori') === $category->slug ? 'primary' : 'secondary' }}"
+                        size="sm"
+                        href="{{ route('shop',array_filter(['kategori'=>$category->slug,'q'=>request('q')])) }}"
+                    >
+                        {{ $category->name }}
+                    </x-button>
+                @endforeach
+            </div>
+        </div>
+
+        <!-- Products Grid -->
+        @forelse($products as $product)
+            @if($loop->first)
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            @endif
+
+            <a href="{{ route('products.show',$product->slug) }}" class="group">
+                <x-card hoverable class="h-full flex flex-col overflow-hidden">
+                    <!-- Product Image -->
+                    <div class="relative mb-4 bg-gray-100 rounded-lg overflow-hidden h-48">
+                        @if($product->media_path)
+                            <img
+                                src="{{ asset($product->media_path) }}"
+                                alt="{{ $product->name }}"
+                                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                loading="lazy"
+                            >
+                        @else
+                            <div class="w-full h-full bg-gradient-to-br from-[#f3e8ff] to-[#e9d5ff] flex items-center justify-center">
+                                <span class="text-5xl">{{ $product->art_theme === 'sky' ? '🌥️' : '✦' }}</span>
+                            </div>
+                        @endif
+
+                        <!-- Badge -->
+                        <div class="absolute top-3 right-3">
+                            @if($product->status === 'coming_soon')
+                                <x-badge variant="warning">Segera Hadir</x-badge>
+                            @elseif($product->badge)
+                                <x-badge variant="success">{{ $product->badge }}</x-badge>
+                            @else
+                                <x-badge variant="primary">Digital</x-badge>
+                            @endif
+                        </div>
+                    </div>
+
+                    <!-- Product Info -->
+                    <div class="flex-1 flex flex-col">
+                        <h3 class="text-lg font-bold text-gray-900 mb-2 group-hover:text-[#6b2cdd] transition-colors">
+                            {{ $product->name }}
+                        </h3>
+
+                        <!-- Stock Status -->
+                        <div class="mb-4 flex-1">
+                            @if($product->stock_count > 0)
+                                <x-badge variant="success">
+                                    ✓ Tersedia · {{ $product->stock_count }} stok
+                                </x-badge>
+                            @elseif($product->status === 'published')
+                                <x-badge variant="error">
+                                    Stok habis
+                                </x-badge>
+                            @else
+                                <x-badge variant="warning">
+                                    ⚠ Belum tersedia
+                                </x-badge>
+                            @endif
+                        </div>
+
+                        <!-- Price & CTA -->
+                        <div class="flex items-end justify-between pt-4 border-t border-gray-200">
+                            <div>
+                                @if($product->from_price === null)
+                                    <p class="text-sm text-gray-500">Harga menyusul</p>
+                                @else
+                                    <p class="text-2xl font-bold text-[#6b2cdd]">
+                                        Rp{{ number_format($product->from_price,0,',','.') }}
+                                    </p>
+                                @endif
+                            </div>
+                            <div class="text-[#6b2cdd] group-hover:translate-x-1 transition-transform">
+                                →
+                            </div>
+                        </div>
+                    </div>
+                </x-card>
+            </a>
+
+            @if($loop->last)
+                </div>
+            @endif
+        @empty
+            <!-- Empty State -->
+            <x-alert variant="warning">
+                <span>🔍</span>
+                <div>
+                    <p class="font-semibold text-gray-900">Tidak ada produk yang ditemukan</p>
+                    <p class="text-sm text-gray-600 mt-1">Coba gunakan kata kunci atau kategori lain</p>
+                </div>
+            </x-alert>
+        @endforelse
+
+        <!-- Pagination -->
+        @if($products->count() > 0)
+            <div class="mt-12 flex justify-center">
+                {{ $products->links() }}
+            </div>
+        @endif
     </div>
-    <div class="product-body"><h3>{{ $product->name }}</h3><div class="stock {{ $product->stock_count > 0 ? 'available' : '' }}">{{ $product->stock_count > 0 ? 'Tersedia · '.$product->stock_count.' stok' : ($product->status === 'published' ? 'Stok habis' : 'Belum tersedia') }}</div><div class="price-row"><span class="price {{ $product->from_price === null ? 'placeholder' : '' }}">{{ $product->from_price === null ? 'Harga menyusul' : 'Rp'.number_format($product->from_price,0,',','.') }}</span><span class="card-arrow">@include('partials.icon',['name'=>'arrow'])</span></div></div>
-</a>
-@empty<div class="empty-state"><strong>Belum ada produk yang cocok.</strong><p>Coba kata kunci atau kategori lain.</p></div>@endforelse
 </div>
-<div class="pagination">{{ $products->links() }}</div>
 @endsection
