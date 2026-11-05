@@ -15,6 +15,9 @@ Route::get('/', [CatalogController::class, 'index'])->name('shop');
 Route::get('/produk/{slug}', [CatalogController::class, 'show'])->name('products.show');
 Route::get('/halaman/{slug}', [CatalogController::class, 'page'])->name('content.show');
 
+// Park UI Components Demo
+Route::get('/demo/park-ui', fn() => view('park-ui-demo'))->name('demo.park-ui');
+
 Route::middleware('guest')->group(function () {
     Route::get('/masuk', [AuthController::class, 'loginForm'])->name('login');
     Route::post('/masuk', [AuthController::class, 'login'])->middleware('throttle:5,1');
