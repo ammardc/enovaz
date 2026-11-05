@@ -56,11 +56,8 @@ Route::middleware(['auth', 'not.blocked'])->group(function () {
 
 Route::post('/webhook/casaku', [PaymentController::class, 'webhook'])->middleware('throttle:120,1')->name('casaku.webhook');
 
+// Store Admin Routes (without 2FA requirement)
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'not.blocked'])->group(function () {
-    Route::get('/2fa', [AdminTwoFactorController::class, 'form'])->name('2fa');
-    Route::post('/2fa', [AdminTwoFactorController::class, 'verify'])->middleware('throttle:5,1')->name('2fa.verify');
-});
-Route::prefix('admin')->name('admin.')->middleware(['auth', 'not.blocked', 'admin.2fa'])->group(function () {
     Route::get('/', [AdminController::class, 'index'])->name('index');
     Route::get('/kategori', [AdminController::class, 'categories'])->name('categories');
     Route::post('/kategori', [AdminController::class, 'createCategory'])->name('categories.create');
