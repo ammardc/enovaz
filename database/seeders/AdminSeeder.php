@@ -16,6 +16,7 @@ class AdminSeeder extends Seeder
         // Create first admin account
         User::create([
             'name' => 'Admin E-Novaz',
+            'username' => 'admin',
             'email' => 'admin@enovaz.local',
             'password' => Hash::make('Admin@123456'),
             'role' => 'admin',
@@ -25,6 +26,7 @@ class AdminSeeder extends Seeder
 
         $this->command->info('✅ Admin account created successfully!');
         $this->command->info('📧 Email: admin@enovaz.local');
+        $this->command->info('👤 Username: admin');
         $this->command->info('🔑 Password: Admin@123456');
         $this->command->warn('⚠️  Please change the password after first login!');
     }
