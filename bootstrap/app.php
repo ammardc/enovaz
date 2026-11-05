@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustProxies(at: ['127.0.0.1', '::1']);
         $middleware->validateCsrfTokens(except: ['webhook/casaku']);
         $middleware->alias([
+            'admin' => \App\Http\Middleware\AdminMiddleware::class,
             'admin.2fa' => \App\Http\Middleware\EnsureAdminTwoFactor::class,
             'not.blocked' => \App\Http\Middleware\EnsureNotBlocked::class,
         ]);

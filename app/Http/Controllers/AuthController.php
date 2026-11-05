@@ -22,12 +22,48 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $data = $request->validate(['username' => ['required','string'], 'password' => ['required','string']]);
-        if (! Auth::attempt($data, $request->boolean('remember')) || Auth::user()->blocked) {
-            Auth::logout();
-            return back()->withErrors(['username' => 'Username atau kata sandi tidak cocok, atau akun diblokir.'])->onlyInput('username');
+        
+        // Find user by username or email
+        $user = User::where('username', $data['username'])
+            ->orWhere('email', $data['username'])
+            ->first();
+        
+        // Check if account is locked
+        if ($user && $user->isLocked()) {
+            return back()->withErrors(['username' => 'Akun Anda terkunci hingga ' . $user->locked_until->format('H:i:s') . '. Silakan coba lagi nanti.'])->onlyInput('username');
         }
+        
+        // Check if account is inactive
+        if ($user && !$user->is_active) {
+            return back()->withErrors(['username' => 'Akun Anda telah dinonaktifkan. Hubungi admin untuk informasi lebih lanjut.'])->onlyInput('username');
+        }
+        
+        // Attempt login
+        if (! Auth::attempt($data, $request->boolean('remember'))) {
+            // Increment failed attempts
+            if ($user) {
+                $user->incrementFailedAttempts();
+            }
+            
+            return back()->withErrors(['username' => 'Username atau kata sandi tidak cocok.'])->onlyInput('username');
+        }
+        
+        // Check if user is blocked (legacy)
+        if (Auth::user()->blocked ?? false) {
+            Auth::logout();
+            return back()->withErrors(['username' => 'Akun diblokir.'])->onlyInput('username');
+        }
+        
+        // Reset failed attempts on successful login
+        Auth::user()->resetFailedAttempts();
+        
         $request->session()->regenerate();
-        Auth::user()->forceFill(['last_login_at' => now()])->save();
+        
+        // Redirect admin to dashboard, regular users to shop
+        if (Auth::user()->isAdmin()) {
+            return redirect()->route('admin.dashboard');
+        }
+        
         return redirect()->intended(route('shop'));
     }
 
@@ -39,6 +75,11 @@ class AuthController extends Controller
             'email' => ['required','email','max:255','unique:users,email'],
             'password' => ['required','confirmed',PasswordRule::min(10)->letters()->numbers()],
         ]);
+        
+        // Set default role and active status
+        $data['role'] = 'user';
+        $data['is_active'] = true;
+        
         $user = User::create($data);
         DB::table('wallet_accounts')->insert(['user_id' => $user->id, 'balance_idr' => 0, 'created_at' => now(), 'updated_at' => now()]);
         Auth::login($user);

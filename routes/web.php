@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminController as UserAdminController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AdminTwoFactorController;
 use App\Http\Controllers\AuthController;
@@ -95,4 +96,19 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'not.blocked', 'admi
     Route::get('/koreksi-saldo', [AdminController::class, 'adjustments'])->name('adjustments');
     Route::post('/koreksi-saldo', [AdminController::class, 'requestAdjustment'])->name('adjustments.request');
     Route::post('/koreksi-saldo/{id}', [AdminController::class, 'decideAdjustment'])->name('adjustments.decide');
+});
+
+// Admin User Management Routes (New System)
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
+    Route::get('/dashboard', [UserAdminController::class, 'dashboard'])->name('dashboard');
+    
+    // User Management
+    Route::get('/users', [UserAdminController::class, 'users'])->name('users.index');
+    Route::get('/users/{user}', [UserAdminController::class, 'showUser'])->name('users.show');
+    Route::get('/users/{user}/edit', [UserAdminController::class, 'editUser'])->name('users.edit');
+    Route::put('/users/{user}', [UserAdminController::class, 'updateUser'])->name('users.update');
+    Route::post('/users/{user}/reset-password', [UserAdminController::class, 'resetPassword'])->name('users.reset-password');
+    Route::post('/users/{user}/unlock', [UserAdminController::class, 'unlockUser'])->name('users.unlock');
+    Route::post('/users/{user}/toggle-active', [UserAdminController::class, 'toggleActive'])->name('users.toggle-active');
+    Route::delete('/users/{user}', [UserAdminController::class, 'deleteUser'])->name('users.delete');
 });
