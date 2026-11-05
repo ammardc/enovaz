@@ -1,0 +1,3 @@
+@extends('layouts.app')
+@section('title','Rahasia unit #'.$stock->id)
+@section('content')<a class="back-link" href="{{ route('admin.stock',$stock->variant_id) }}">@include('partials.icon',['name'=>'back']) Kembali ke stok</a><div class="panel" style="max-width:660px"><span class="eyebrow">Akses owner tercatat</span><h1 class="page-title">Unit #{{ $stock->id }}</h1><div class="notice">Jangan bagikan tampilan ini. Rahasia tidak disimpan di HTML halaman stok, log, atau ekspor metadata.</div>@foreach($access as $key=>$value)<div class="summary-line"><span>{{ ucfirst(str_replace('_',' ',$key)) }}</span><strong style="word-break:break-all">{{ $value }}</strong></div>@endforeach</div>@endsection

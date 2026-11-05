@@ -1,0 +1,3 @@
+@extends('layouts.app')
+@section('title','Reset kata sandi')
+@section('content')<div class="auth-wrap"><div class="panel"><h1>Kata sandi baru</h1><form method="post" action="{{ route('password.update') }}" class="form-grid">@csrf<input type="hidden" name="token" value="{{ $token }}"><div class="form-field"><label>Email</label><input class="form-control" name="email" type="email" value="{{ $email }}" required></div><div class="form-field"><label>Kata sandi baru</label><input class="form-control" name="password" type="password" required></div><div class="form-field"><label>Ulangi kata sandi</label><input class="form-control" name="password_confirmation" type="password" required></div><button class="button full">Simpan kata sandi</button></form></div></div>@endsection
