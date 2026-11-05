@@ -6,7 +6,7 @@
         <h1>Masuk</h1>
         <form method="post" action="{{ route('login') }}" class="form-grid">
             @csrf
-            <div class="form-field"><label for="email">Email</label><input class="form-control" id="email" name="email" type="email" value="{{ old('email') }}" autocomplete="email" required></div>
+            <div class="form-field"><label for="username">Username</label><input class="form-control" id="username" name="username" type="text" value="{{ old('username') }}" autocomplete="username" required></div>
             <div class="form-field"><label for="password">Kata sandi</label><input class="form-control" id="password" name="password" type="password" autocomplete="current-password" required></div>
             <div class="auth-options"><label><input name="remember" type="checkbox"> Ingat saya</label><a class="text-link" href="{{ route('password.request') }}">Lupa kata sandi?</a></div>
             <button class="button full">Masuk</button>

@@ -8,7 +8,6 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\RefundController;
 use App\Http\Controllers\WalletController;
-use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -31,20 +30,11 @@ Route::get('/auth/google/callback', [AuthController::class, 'googleCallback'])->
 Route::post('/keluar', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
 
 Route::middleware(['auth','not.blocked'])->group(function () {
-    Route::get('/verifikasi-email', fn () => view('auth.verify'))->name('verification.notice');
-    Route::get('/verifikasi-email/{id}/{hash}', function (EmailVerificationRequest $request) {
-        $request->fulfill();
-        return redirect()->route('shop')->with('success', 'Email berhasil diverifikasi.');
-    })->middleware('signed')->name('verification.verify');
-    Route::post('/verifikasi-email/kirim', function (Request $request) {
-        $request->user()->sendEmailVerificationNotification();
-        return back()->with('success', 'Tautan verifikasi dikirim.');
-    })->middleware('throttle:3,1')->name('verification.send');
     Route::get('/akun', [AuthController::class, 'profile'])->name('profile');
     Route::post('/akun/password', [AuthController::class, 'changePassword'])->name('profile.password');
 });
 
-Route::middleware(['auth', 'not.blocked', 'verified'])->group(function () {
+Route::middleware(['auth', 'not.blocked'])->group(function () {
     Route::get('/pesanan', [OrderController::class, 'index'])->name('orders.index');
     Route::get('/pesanan/{number}', [OrderController::class, 'show'])->name('orders.show');
     Route::post('/pesanan/{number}/akses', [OrderController::class, 'reveal'])->middleware('throttle:10,1')->name('orders.reveal');
@@ -62,11 +52,11 @@ Route::middleware(['auth', 'not.blocked', 'verified'])->group(function () {
 
 Route::post('/webhook/casaku', [PaymentController::class, 'webhook'])->middleware('throttle:120,1')->name('casaku.webhook');
 
-Route::prefix('admin')->name('admin.')->middleware(['auth', 'not.blocked', 'verified'])->group(function () {
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'not.blocked'])->group(function () {
     Route::get('/2fa', [AdminTwoFactorController::class, 'form'])->name('2fa');
     Route::post('/2fa', [AdminTwoFactorController::class, 'verify'])->middleware('throttle:5,1')->name('2fa.verify');
 });
-Route::prefix('admin')->name('admin.')->middleware(['auth', 'not.blocked', 'verified', 'admin.2fa'])->group(function () {
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'not.blocked', 'admin.2fa'])->group(function () {
     Route::get('/', [AdminController::class, 'index'])->name('index');
     Route::get('/kategori', [AdminController::class, 'categories'])->name('categories');
     Route::post('/kategori', [AdminController::class, 'createCategory'])->name('categories.create');
