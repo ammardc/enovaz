@@ -205,6 +205,18 @@
             z-index: 2;
         }
         
+        /* Fix SVG sizing issues */
+        .admin-content svg {
+            max-width: 100%;
+            max-height: 100%;
+        }
+        
+        /* Prevent any pseudo-elements from showing as backgrounds */
+        body:has(.admin-layout)::before,
+        body:has(.admin-layout)::after {
+            display: none !important;
+        }
+        
         .admin-logout-btn {
             background: #ef4444;
             color: white;
