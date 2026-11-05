@@ -80,7 +80,7 @@ class AdminController extends Controller
     public function resetPassword(Request $request, User $user)
     {
         $validated = $request->validate([
-            'new_password' => ['required', 'confirmed', Password::min(8)
+            'new_password' => ['required', 'confirmed', Password::min(16)
                 ->mixedCase()
                 ->numbers()
                 ->symbols()],

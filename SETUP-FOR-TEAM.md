@@ -29,9 +29,9 @@ ADMIN_PASSWORD=PasswordKuat@123
 ```
 
 **IMPORTANT:** 
-- Password harus minimal 8 karakter
+- Password harus minimal 16 karakter
 - Harus mengandung: huruf besar, huruf kecil, angka, dan karakter spesial
-- Contoh password kuat: `MySecure@Pass123`
+- Contoh password kuat: `MyVerySecure@Pass2026`
 
 ### Step 4: Start Docker Containers
 ```bash
@@ -105,7 +105,7 @@ Jika Anda tidak mengubah `.env`, default credentials adalah:
 ```
 Email: admin@enovaz.local
 Username: admin
-Password: Admin@123456
+Password: AdminSecure@123456
 ```
 
 **⚠️ WAJIB GANTI PASSWORD SETELAH LOGIN PERTAMA!**

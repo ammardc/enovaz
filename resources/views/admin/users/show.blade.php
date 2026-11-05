@@ -157,7 +157,7 @@
                         <label class="block text-gray-700 font-semibold mb-2">New Password</label>
                         <input type="password" name="new_password" required
                             class="w-full border border-gray-300 rounded-lg px-4 py-2"
-                            placeholder="Minimum 8 characters">
+                            placeholder="Minimum 16 characters">
                     </div>
                     
                     <div class="mb-4">
@@ -170,7 +170,7 @@
                     <div class="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                         <p class="text-sm text-yellow-800">
                             <strong>Password Requirements:</strong><br>
-                            • Minimum 8 characters<br>
+                            • Minimum 16 characters<br>
                             • Uppercase & lowercase letters<br>
                             • Numbers<br>
                             • Special characters (@$!%*?&)
