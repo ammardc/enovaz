@@ -73,7 +73,7 @@ class AuthController extends Controller
             'name' => ['required','string','max:100'],
             'username' => ['required','string','max:50','unique:users,username','alpha_dash'],
             'email' => ['required','email','max:255','unique:users,email'],
-            'password' => ['required','confirmed',PasswordRule::min(10)->letters()->numbers()],
+            'password' => ['required','confirmed',PasswordRule::min(8)->letters()->numbers()],
         ]);
         
         // Set default role and active status
@@ -106,7 +106,7 @@ class AuthController extends Controller
     {
         $data = $request->validate([
             'token' => ['required'], 'email' => ['required','email'],
-            'password' => ['required','confirmed',PasswordRule::min(10)->letters()->numbers()],
+            'password' => ['required','confirmed',PasswordRule::min(8)->letters()->numbers()],
         ]);
         $status = Password::reset($data, function (User $user, string $password) {
             $user->forceFill(['password' => Hash::make($password), 'remember_token' => Str::random(60)])->save();
@@ -123,7 +123,7 @@ class AuthController extends Controller
     {
         $request->validate([
             'current_password' => ['required','current_password'],
-            'password' => ['required','confirmed',PasswordRule::min(10)->letters()->numbers()],
+            'password' => ['required','confirmed',PasswordRule::min(8)->letters()->numbers()],
         ]);
         $request->user()->forceFill(['password' => Hash::make($request->password)])->save();
         return back()->with('success', 'Kata sandi diperbarui.');
