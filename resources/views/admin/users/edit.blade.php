@@ -1,19 +1,15 @@
-@extends('layouts.app')
+@extends('layouts.admin')
 
-@section('title', 'Edit User')
+@section('page-title', 'Edit User')
+@section('breadcrumb', 'Update user information')
 
 @section('content')
-<div class="container mx-auto px-4 py-8">
-    <!-- Header -->
-    <div class="flex justify-between items-center mb-8">
-        <div>
-            <h1 class="text-3xl font-bold text-gray-800">Edit User</h1>
-            <p class="text-gray-600 mt-2">Update user information</p>
-        </div>
-        <a href="{{ route('admin.users.show', $user) }}" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg">
-            ← Back
-        </a>
-    </div>
+<!-- Header Action -->
+<div class="flex justify-end items-center mb-6">
+    <a href="{{ route('admin.users.show', $user) }}" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition">
+        ← Back
+    </a>
+</div>
 
     @if($errors->any())
     <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
@@ -101,5 +97,4 @@
             </form>
         </div>
     </div>
-</div>
 @endsection

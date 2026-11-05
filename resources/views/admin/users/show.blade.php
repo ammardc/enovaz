@@ -1,19 +1,15 @@
-@extends('layouts.app')
+@extends('layouts.admin')
 
-@section('title', 'User Details')
+@section('page-title', 'User Details')
+@section('breadcrumb', 'View and manage user: ' . $user->name)
 
 @section('content')
-<div class="container mx-auto px-4 py-8">
-    <!-- Header -->
-    <div class="flex justify-between items-center mb-8">
-        <div>
-            <h1 class="text-3xl font-bold text-gray-800">User Details</h1>
-            <p class="text-gray-600 mt-2">{{ $user->name }}</p>
-        </div>
-        <a href="{{ route('admin.users.index') }}" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg">
-            ← Back to Users
-        </a>
-    </div>
+<!-- Header Action -->
+<div class="flex justify-end items-center mb-6">
+    <a href="{{ route('admin.users.index') }}" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition">
+        ← Back to Users
+    </a>
+</div>
 
     @if(session('success'))
     <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
@@ -193,7 +189,6 @@
             </div>
         </div>
     </div>
-</div>
 
 <script>
 function toggleResetPassword() {

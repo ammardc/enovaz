@@ -1,17 +1,11 @@
-@extends('layouts.app')
+@extends('layouts.admin')
 
-@section('title', 'Admin Dashboard')
+@section('page-title', 'Dashboard')
+@section('breadcrumb', 'Overview & Statistics')
 
 @section('content')
-<div class="container mx-auto px-4 py-8">
-    <!-- Header -->
-    <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-800">Admin Dashboard</h1>
-        <p class="text-gray-600 mt-2">Selamat datang, {{ auth()->user()->name }}</p>
-    </div>
-
-    <!-- Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+<!-- Stats Cards -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <!-- Total Users -->
         <div class="bg-white rounded-lg shadow-md p-6">
             <div class="flex items-center justify-between">

@@ -1,19 +1,15 @@
-@extends('layouts.app')
+@extends('layouts.admin')
 
-@section('title', 'User Management')
+@section('page-title', 'User Management')
+@section('breadcrumb', 'Manage all registered users')
 
 @section('content')
-<div class="container mx-auto px-4 py-8">
-    <!-- Header -->
-    <div class="flex justify-between items-center mb-8">
-        <div>
-            <h1 class="text-3xl font-bold text-gray-800">User Management</h1>
-            <p class="text-gray-600 mt-2">Kelola semua user yang terdaftar</p>
-        </div>
-        <a href="{{ route('admin.dashboard') }}" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg">
-            ← Back to Dashboard
-        </a>
-    </div>
+<!-- Header Action -->
+<div class="flex justify-end items-center mb-6">
+    <a href="{{ route('admin.dashboard') }}" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition">
+        ← Back to Dashboard
+    </a>
+</div>
 
     @if(session('success'))
     <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
@@ -133,5 +129,4 @@
     <div class="mt-6">
         {{ $users->links() }}
     </div>
-</div>
 @endsection
