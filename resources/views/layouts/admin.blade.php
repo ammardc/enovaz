@@ -211,6 +211,37 @@
             max-height: 100%;
         }
         
+        /* Force stat card icons to fixed size */
+        .admin-content .bg-blue-100 svg,
+        .admin-content .bg-green-100 svg,
+        .admin-content .bg-purple-100 svg,
+        .admin-content .bg-red-100 svg,
+        .admin-content .bg-blue-50 svg,
+        .admin-content .bg-red-50 svg,
+        .admin-content .bg-gray-50 svg {
+            width: 32px !important;
+            height: 32px !important;
+            max-width: 32px !important;
+            max-height: 32px !important;
+        }
+        
+        /* Override any Tailwind width/height utilities on SVGs */
+        .admin-content .w-8 {
+            width: 2rem !important;
+        }
+        
+        .admin-content .h-8 {
+            height: 2rem !important;
+        }
+        
+        .admin-content .w-6 {
+            width: 1.5rem !important;
+        }
+        
+        .admin-content .h-6 {
+            height: 1.5rem !important;
+        }
+        
         /* Prevent any pseudo-elements from showing as backgrounds */
         body:has(.admin-layout)::before,
         body:has(.admin-layout)::after {
