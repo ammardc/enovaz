@@ -1,3 +1,62 @@
 @extends('layouts.app')
-@section('title','Tagihan '.$invoice->reference)
-@section('content')<a class="back-link" href="{{ $invoice->order_id ? route('orders.index') : route('wallet.index') }}">@include('partials.icon',['name'=>'back']) Kembali</a><span class="eyebrow">{{ $invoice->purpose === 'order' ? 'Pembayaran pesanan' : 'Top up saldo' }}</span><h1 class="page-title">Tagihan QRIS</h1><p class="page-subtitle">{{ $invoice->reference }}</p><div class="two-col" style="margin-top:26px"><div class="panel"><div class="status-pill {{ $invoice->status }}">{{ ['pending'=>'Menunggu pembayaran','paid'=>'Pembayaran selesai','expired'=>'Kedaluwarsa','review'=>'Perlu pemeriksaan','creating'=>'Membuat tagihan'][$invoice->status] ?? $invoice->status }}</div>@if($invoice->status === 'pending' && $invoice->qr_string)<div class="qr-box"><canvas data-qris="{{ $invoice->qr_string }}" aria-label="Kode QRIS pembayaran"></canvas></div><p class="small-note" style="text-align:center">Scan dengan aplikasi pembayaran yang mendukung QRIS.</p>@elseif($invoice->status === 'review')<div class="notice" style="margin-top:18px">Tagihan sedang diperiksa. Jangan membayar ulang sebelum statusnya jelas. Hubungi bantuan dengan nomor tagihan ini.</div>@elseif($invoice->status === 'paid')<div class="notice" style="margin-top:18px">Pembayaran sudah terverifikasi.</div>@endif@if($invoice->provider_transaction_id && in_array($invoice->status,['pending','review']))<form method="post" action="{{ route('payments.check',$invoice->reference) }}" style="margin-top:20px">@csrf<button class="button secondary full">Cek status pembayaran</button></form>@endif@if($invoice->order_id)<a class="button light full" style="margin-top:11px" href="{{ route('orders.index') }}">Lihat pesanan</a>@else<a class="button light full" style="margin-top:11px" href="{{ route('wallet.index') }}">Lihat Wallet</a>@endif</div><div class="panel"><h2>Rincian tagihan</h2><div class="summary-line"><span>Nomor</span><strong style="font-size:12px;word-break:break-all">{{ $invoice->reference }}</strong></div><div class="summary-line"><span>Nominal dasar</span><strong>Rp{{ number_format($invoice->base_amount_idr,0,',','.') }}</strong></div><div class="summary-line total"><span>Bayar tepat</span><strong>{{ $invoice->final_amount_idr === null ? 'Menunggu konfirmasi' : 'Rp'.number_format($invoice->final_amount_idr,0,',','.') }}</strong></div>@if($invoice->expires_at)<div class="summary-line"><span>Batas waktu</span><strong>{{ \Carbon\Carbon::parse($invoice->expires_at)->timezone('Asia/Jakarta')->format('d M Y H:i') }} WIB</strong></div>@if($invoice->status === 'pending')<div class="summary-line"><span>Sisa tampilan</span><strong data-expiry="{{ \Carbon\Carbon::parse($invoice->expires_at)->toIso8601String() }}">—</strong></div>@endif@endif<p class="small-note">Jika waktu tampilan habis, status pembayaran akan dicek ke Casaku. Jangan membuat pembayaran ganda.</p></div></div>@endsection
+@section('title', 'Pembayaran '.$order->code)
+
+@section('content')
+@php($payment = $order->payment)
+@php($amount = number_format($payment->expected_amount, 0, ',', '.'))
+@php($item = $order->items->first())
+<nav class="mb-4 text-sm text-muted"><a href="{{ route('orders.index') }}" class="hover:text-brand-600">Pesanan Saya</a> / Pembayaran</nav>
+
+<div class="grid items-start gap-5 lg:grid-cols-[1fr_1.1fr]">
+    <div class="panel text-center">
+        <div class="mb-4 flex items-center justify-center gap-4">
+            <img src="{{ asset('images/pay/qris.svg') }}" alt="QRIS" class="h-6 w-auto">
+        </div>
+        <div class="mx-auto w-full max-w-[280px] rounded-2xl border border-line bg-white p-2 [&_svg]:h-auto [&_svg]:w-full">
+            {!! $qr !!}
+        </div>
+        @if($simulation)
+            <p class="mt-2 text-xs text-amber-700">Mode simulasi.</p>
+        @endif
+        <p class="mt-5 text-sm text-muted">Total bayar</p>
+        <div class="num text-4xl font-semibold tracking-tight">Rp{{ substr($amount, 0, -3) }}<span class="text-brand-600 underline decoration-2 underline-offset-4">{{ substr($amount, -3) }}</span></div>
+        <p class="mt-2 text-sm text-muted">Bayar sesuai nominal.</p>
+        <span class="num mt-4 inline-flex rounded-full bg-amber-50 px-3 py-1 text-sm font-bold text-amber-700" data-expires="{{ $payment->expires_at->toIso8601String() }}">Berlaku {{ $payment->expires_at->diffForHumans(null, true) }}</span>
+    </div>
+
+    <div class="panel">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+            <h1 class="text-xl font-semibold tracking-tight">Pembayaran</h1>
+            <span class="pill {{ $order->statusClass() }}">{{ $order->statusLabel() }}</span>
+        </div>
+
+        <dl class="num mt-4 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
+            <dt class="text-muted">No. pesanan</dt><dd class="font-mono font-semibold">{{ $order->code }}</dd>
+            <dt class="text-muted">{{ $order->isTopup() ? 'Untuk' : 'Produk' }}</dt><dd class="font-semibold">{{ $order->title() }}</dd>
+            <dt class="text-muted">Harga</dt><dd class="font-semibold">{{ rupiah($payment->base_amount) }}</dd>
+            <dt class="text-muted">Kode unik</dt><dd class="font-semibold">{{ rupiah($payment->uniqueCode()) }}</dd>
+            <dt class="text-muted">Total</dt><dd class="text-base font-semibold tracking-tight">{{ rupiah($payment->expected_amount) }}</dd>
+            <dt class="text-muted">Batas bayar</dt><dd class="font-semibold">{{ wib($payment->expires_at, 'H.i') }} WIB</dd>
+        </dl>
+
+        <ol class="mt-5 space-y-2.5 text-sm text-muted">
+            <li class="flex gap-2.5"><span class="grid size-6 shrink-0 place-items-center rounded-full bg-brand-100 text-xs font-bold text-brand-700">1</span>Buka aplikasi bank / e-wallet.</li>
+            <li class="flex gap-2.5"><span class="grid size-6 shrink-0 place-items-center rounded-full bg-brand-100 text-xs font-bold text-brand-700">2</span>Scan QR, bayar sesuai nominal.</li>
+            <li class="flex gap-2.5"><span class="grid size-6 shrink-0 place-items-center rounded-full bg-brand-100 text-xs font-bold text-brand-700">3</span>Tekan “Cek pembayaran”.</li>
+        </ol>
+
+        <form method="POST" action="{{ route('payments.check', $order->code) }}" class="mt-6" data-once>
+            @csrf
+            <button type="submit" class="btn btn-primary w-full py-3" data-loading="Memeriksa pembayaran…">Cek pembayaran</button>
+        </form>
+
+        @if($simulation)
+            <form method="POST" action="{{ route('payments.simulate', $order->code) }}" class="mt-2">
+                @csrf
+                <button type="submit" class="btn btn-ghost w-full">Simulasi: tandai sudah dibayar</button>
+            </form>
+        @endif
+
+    </div>
+</div>
+@endsection

@@ -1,91 +1,125 @@
-# E-Novaz Store
+# E-Novaz
 
-Toko produk digital berbasis Laravel 12, Blade, Tailwind/Vite, dan database. Tampilan mengikuti pola referensi mobile yang diberikan: katalog dua kolom, chip kategori, kartu saldo, serta navigasi Shop · Orders · Wallet. Produk awal adalah **ChatGPT Plus** dan **Gemini Pro**. Keduanya disimpan sebagai contoh **Segera hadir**, tanpa harga dan stok nyata.
+Toko produk digital dengan pendekatan **Security by Design**. Proyek Akhir Pra-UTS Kelompok 2, RKS 2-A, Politeknik Negeri Cilacap.
 
-## 🐳 Quick Start dengan Docker (Recommended)
+- **Backend:** PHP 8.2+, Laravel 12
+- **Tampilan:** Blade + Tailwind CSS 4 (Vite)
+- **Database:** MariaDB (InnoDB), 8 tabel ERD laporan + 1 tabel `balance_ledger` untuk saldo
+- **Pembayaran:** saldo deposit (diisi admin). QRIS DANA via Casaku sudah ada di kode tetapi sedang **maintenance** (`QRIS_ENABLED=false`)
 
-**Untuk development tim dan production deployment, gunakan Docker:**
+## Fitur
+
+**Pembeli**
+- Daftar dan masuk dengan username + password (`/daftar`, `/masuk`). Password minimal 12 karakter (admin 16).
+- Katalog, pencarian, filter kategori, dan detail produk.
+- Beli langsung pakai saldo: stok dikunci, saldo dipotong, dan akun diserahkan dalam satu transaksi database.
+- Riwayat pesanan dan tombol buka kredensial setelah lunas.
+- Saldo deposit dan riwayat mutasi. Saldo ditambah admin di menu Admin > Pengguna (isi saldo via QRIS sedang maintenance).
+- Profil: ubah nama dan ganti password (wajib password lama; perangkat lain otomatis keluar).
+- CAPTCHA gambar buatan sendiri (PHP GD, tanpa layanan pihak ketiga) di login dan daftar; sekali pakai, kedaluwarsa 2 menit, jawaban hanya disimpan sebagai HMAC di sesi.
+- 2FA (TOTP RFC 6238, tanpa library/layanan luar) wajib untuk admin: login = password + CAPTCHA + kode 6 digit authenticator. Rahasia terenkripsi (CredentialVault, AAD per user), kode tidak bisa dipakai ulang, 5 kode salah = ulang dari awal. Setel 2FA butuh konfirmasi ulang password. HP hilang: `php artisan enovaz:2fa-reset <username>` (hanya dari terminal server).
+
+**Admin**
+- Ringkasan penjualan.
+- Produk: tambah, edit, nonaktifkan.
+- Stok: tambah massal, disimpan terenkripsi.
+- Transaksi, termasuk penanganan status `review_required`.
+- Kelola role pengguna, tambah saldo pembeli, dan lihat audit log.
+- 2FA wajib untuk akun admin.
+
+## Menjalankan di laptop Windows (XAMPP)
+
+Syarat: **XAMPP** (PHP 8.2+), **Node.js LTS**, **Git**. Composer tidak wajib (diunduh otomatis).
+
+1. Buka terminal di folder project, jalankan **`.\setup.bat -OwnDb`** (disarankan: database mandiri di folder project,
+   tidak perlu MySQL XAMPP menyala dan tidak perlu password root XAMPP).
+   Tanpa `-OwnDb`, skrip memakai MySQL XAMPP: nyalakan dulu di XAMPP Control Panel dan masukkan password root bila ditanya.
+2. Skrip mengaktifkan ekstensi PHP (dengan cadangan `php.ini`), memasang dependensi, membangun tampilan,
+   membuat `.env` dengan kunci & password acak, membuat database + akun terbatas, migrasi, seed, dan GRANT.
+   Password admin ditampilkan sekali di akhir (juga tersimpan di `.env`).
+3. Klik dua kali **`jalankan.bat`**, buka http://localhost:8000 (alamat untuk laptop lain di jaringan ikut ditampilkan).
+
+Pakai data dari tim: taruh `.env` dari tim di folder project, lalu `.\setup.bat -OwnDb -Dump _untuk-tim\enovaz_db.sql`.
+`.env` harus sama dengan pembuat dump, karena stok dienkripsi dengan `CREDENTIAL_KEY`.
+
+| Skrip | Fungsi |
+|---|---|
+| `setup.bat` | Pasang / perbarui (aman dijalankan berulang). Opsi: `-XamppPath D:\xampp`, `-Dump file.sql`, `-OwnDb` |
+| `setup.bat -OwnDb` | Database mandiri di folder `.mariadb` (port 3308, hanya 127.0.0.1): tidak perlu MySQL XAMPP menyala, tidak perlu password root XAMPP. `jalankan.bat` menyalakannya otomatis |
+| `jalankan.bat` | Server di `0.0.0.0:8000` + scheduler. Port lain: `jalankan.bat 8080` |
+| `backup.bat` | Dump database ke `backups\` (akun migrator, bukan root) |
+| `restore.bat file.sql` | Pulihkan dump (otomatis backup isi lama dulu, minta konfirmasi `YA`) |
+
+`.env`, `backups/`, dan `_untuk-tim/` tidak ikut ke GitHub (lihat `.gitignore`).
+
+### Mode simulasi pembayaran
+
+Dengan `CASAKU_DRIVER=fake` dan `APP_ENV=local`, halaman bayar menampilkan tombol **"Simulasi: tandai sudah dibayar"**. Alur lengkapnya bisa diuji tanpa uang sungguhan: checkout, simulasi bayar, cek status, lalu buka akun. Mode ini otomatis ditolak bila `APP_ENV=production`.
+
+### Mengaktifkan Casaku sungguhan
+
+```env
+CASAKU_DRIVER=live
+CASAKU_LICENSE_KEY=...        # dari dashboard Casaku, hanya disimpan di server
+CASAKU_QR_ID=...              # ID QRIS DANA E-Novaz
+CASAKU_PACKAGE_IDS=id.dana
+CASAKU_WEBHOOK_SECRET=...     # opsional, untuk webhook
+```
+
+URL webhook (opsional): `https://domain-kamu/webhooks/casaku`.
+
+Adapter memakai endpoint dari dokumentasi publik Casaku:
+- `POST /api/generate/v2/qris`
+- `POST /api/generate/check-status`
+- `POST /api/generate/cancel-status`
+
+Sebelum dipakai untuk transaksi nyata, cocokkan nama field respons dengan respons asli akun merchant kalian di `app/Services/Casaku/HttpCasakuGateway.php`. Pastikan juga aplikasi listener Android Casaku aktif.
+
+### Pengujian
 
 ```bash
-# Clone repository
-git clone https://github.com/ammardc/enovaz.git
-cd enovaz
-
-# Setup (otomatis install dependencies, migrate, build)
-bash docker/setup.sh
-
-# Akses aplikasi
-# Web: http://localhost:8000
-# MailHog: http://localhost:8025
+php artisan test
 ```
 
-**Dokumentasi lengkap**: Lihat [DOCKER.md](DOCKER.md)
+Tes di `tests/Feature/SecurityTest.php` mencakup:
+- Manipulasi role saat daftar.
+- Hash Argon2id.
+- Penguncian login.
+- IDOR pada pesanan.
+- Akses admin oleh pembeli.
+- Pemalsuan status bayar dan pemrosesan idempoten.
+- Pelepasan reservasi dan pembayaran terlambat yang masuk review.
+- Ciphertext yang dipindah atau diubah.
+- Webhook palsu.
 
-**Commands helper**:
-```bash
-bash docker/commands.sh help        # Lihat semua commands
-bash docker/commands.sh up          # Start containers
-bash docker/commands.sh artisan migrate
-bash docker/commands.sh test
-bash docker/commands.sh owner email@domain.com
-```
+## Pemetaan ke laporan
 
----
+| Ancaman (Bab 3) | Kontrol di kode |
+|---|---|
+| SQL Injection | Query builder Eloquent (parameter terikat), wildcard LIKE di-escape, kolom urutan dari daftar tetap (`ProductController`) |
+| IDOR detail pesanan | `Controller::ownedOrder()`: `WHERE code = ? AND user_id = ?` dari sesi; selain pemilik mendapat 404 |
+| Paparan kredensial | Password login Argon2id (`config/hashing.php`). Kredensial produk dienkripsi XChaCha20-Poly1305 dengan nonce unik, tag, dan AAD per produk (`CredentialVault`), kunci terpisah `CREDENTIAL_KEY`. Isi kredensial tidak pernah dicatat |
+| Pemalsuan status bayar | Status hanya dari API Casaku (`PaymentService::verify`), ID transaksi dicocokkan, nominal webhook dicocokkan, HMAC webhook diverifikasi |
+| Pemeriksaan berulang | `fulfil()` mengunci baris pembayaran (`lockForUpdate`), keluar bila sudah `paid`, dan `deliveries.digital_account_id` UNIQUE |
+| Excessive privilege DBMS | `database/sql/grants.sql`: akun runtime `enovaz_app` per tabel, tanpa DDL/GRANT, `audit_logs` dan `deliveries` tanpa UPDATE/DELETE |
+| Manipulasi / pemakaian ganda saldo | Saldo hanya diubah `BalanceService` di dalam transaksi dengan `SELECT ... FOR UPDATE` pada baris user. `CHECK (balance >= 0)` di DB. Ledger `balance_ledger` append-only: akun `enovaz_app` hanya SELECT, INSERT. `UNIQUE(order_id, type)` menolak kredit/debit ganda untuk pesanan yang sama. Kolom `balance` tidak fillable. Harga diambil dari DB, bukan dari form. Saldo top-up baru masuk setelah Casaku mencatat lunas |
+| Race condition stok terakhir | Transaksi InnoDB + `SELECT ... FOR UPDATE` saat reservasi dan penyerahan, cek ulang status |
+| Penebakan password / sesi | 5 percobaan per username+IP per menit, throttle per IP, `session()->regenerate()` setelah login, invalidate saat logout, `AuthenticateSession` mengeluarkan sesi lain setelah ganti password, cookie HttpOnly (Secure via `SESSION_SECURE_COOKIE=true` di HTTPS) |
+| Manipulasi role | `role` tidak fillable, selalu `pembeli` saat daftar; middleware `role:` di setiap rute; ubah role butuh autentikasi ulang dan dicatat |
 
-## Status saat ini
+Kontrol tambahan:
+- Header keamanan (CSP, HSTS, X-Frame-Options) di production.
+- `Cache-Control: no-store` di halaman kredensial dan pembayaran.
+- Maksimal 3 tagihan menggantung per pembeli (mencegah penimbunan stok).
+- Admin tidak bisa memenuhi pesanan bila Casaku tidak mencatat lunas.
 
-- Katalog, pencarian, filter, detail produk, akun email dengan verifikasi/reset, Google OAuth melalui Socialite, Orders, Wallet, top up QRIS, checkout saldo/QRIS, pengiriman stok terenkripsi, refund, dan panel admin sudah memiliki alur kode.
-- Admin memiliki produk/varian/kategori/media/stok, konten berversi, pembayaran, pelanggan, koreksi saldo dengan persetujuan admin kedua, laporan dan ekspor CSV per periode, audit, serta TOTP dua langkah.
-- `PAYMENTS_ENABLED=false` dan `CASAKU_LIVE_VERIFIED=false` secara default. **Tidak ada pembayaran live yang dibuka.** Respons Casaku live, listener, webhook di domain nyata, dan transaksi uang masuk belum diuji.
-- Data paket, harga, stok yang berhak dijual, kebijakan final, SMTP, Google OAuth, Telegram resmi, dan hosting produksi belum tersedia. Jangan menyalakan penjualan sebelum seluruhnya diisi dan diuji.
-- Bagian PRD yang masih perlu dilengkapi sebelum klaim rilis penuh: undangan/izin admin granular dan pengelolaan sesi, kebijakan refund parsial, backup/restore teruji, pengukuran performa nyata, pengujian konkurensi di MySQL, serta uji browser seluruh status yang diminta. Dashboard listener Casaku masih memerlukan validasi respons merchant nyata.
+## Perbedaan kecil dari rancangan laporan
 
-## Alternative: Menjalankan lokal tanpa Docker (Windows + XAMPP)
-
-**Catatan**: Untuk kolaborasi tim, sangat direkomendasikan menggunakan Docker (lihat bagian di atas).
-
-Gunakan PHP 8.2+ dengan `pdo_sqlite`/`pdo_mysql`, OpenSSL, mbstring, fileinfo, ZIP, dan GD. Composer lokal yang diunduh saat pembuatan ada di `../composer.phar`.
-
-```powershell
-cd C:\Users\user\Documents\enovazz\store
-& 'C:\xampp\php\php.exe' -d extension=php_zip.dll ..\composer.phar install
-npm ci
-Copy-Item .env.example .env
-& 'C:\xampp\php\php.exe' artisan key:generate
-& 'C:\xampp\php\php.exe' -r 'echo base64_encode(random_bytes(32));'
-```
-
-Masukkan hasil perintah terakhir ke `INVENTORY_KEY` **di file `.env` lokal**. Jangan kirim kunci ini di chat atau commit ke Git. Untuk lokal, `DB_CONNECTION=sqlite`; buat `database/database.sqlite` jika belum ada. Setelah itu:
-
-```powershell
-& 'C:\xampp\php\php.exe' artisan migrate --seed
-npm run build
-& 'C:\xampp\php\php.exe' -d extension=php_gd.dll artisan serve --host=127.0.0.1 --port=8000
-```
-
-Buka `http://127.0.0.1:8000`. Jalankan queue dan scheduler di terminal terpisah untuk alur pembayaran:
-
-```powershell
-& 'C:\xampp\php\php.exe' artisan queue:work
-& 'C:\xampp\php\php.exe' artisan schedule:work
-```
-
-Untuk admin pertama: daftar akun, verifikasi email melalui tautan yang dikirim SMTP (di lokal, `MAIL_MAILER=log` menulis ke `storage/logs/laravel.log`), lalu di terminal server jalankan `php artisan store:owner email@domain.tld`. Buka `/admin` dan aktifkan TOTP. Proses promosi owner hanya boleh dilakukan oleh operator server yang berwenang.
-
-## Konfigurasi produksi
-
-Gunakan VPS/hosting PHP-FPM + Nginx, MySQL/MariaDB InnoDB, HTTPS, worker queue, scheduler, dan backup yang diuji restore. Document root harus `store/public`. Atur `.env` server dengan `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://domain-anda`, `DB_CONNECTION=mysql`, SMTP, Google client ID/secret/redirect, Telegram resmi, `INVENTORY_KEY`, dan kunci Casaku. Rahasia tidak boleh masuk repository. Gunakan `php artisan config:cache`, `route:cache`, migrasi, worker/scheduler supervisi, serta pembatasan cache publik untuk akun, tagihan, wallet, pesanan, dan admin.
-
-Casaku menggunakan API QRIS v2, `x-license-key`, webhook HMAC pada **raw body**, dan pengecekan status server. Adapter merujuk [portal resmi Casaku](https://casaku.id/docs); field respons final tetap harus dicocokkan dengan akun merchant Anda. Saat QRIS diuji live, setel `CASAKU_LIVE_VERIFIED=true` **hanya setelah** invoice order dan top up nyata terbukti masuk, webhook cocok, listener sehat, duplikat aman, serta rekonsiliasi berjalan. Setelah semua syarat lain siap, baru setel `PAYMENTS_ENABLED=true`. Bila layanan dibuka lalu ada masalah, matikan flag itu untuk menghentikan invoice baru; rekonsiliasi invoice lama tetap dapat berjalan selama kredensial Casaku tersedia.
-
-Sebelum menerbitkan produk, admin harus mengisi deskripsi, akses, region, durasi, harga, aturan refund, instruksi, stok, dan kebijakan situs final. Seeder tidak akan menimpa konten yang sudah diedit. Setelah login dan 2FA, buka `/admin/stok`, pilih paket, lalu tambah satu unit melalui formulir atau impor CSV berheader `code,account,password,instructions`; file CSV tidak boleh diletakkan di `public`.
-
-## Pemeriksaan
-
-```powershell
-& 'C:\xampp\php\php.exe' artisan test
-npm run build
-& 'C:\xampp\php\php.exe' artisan view:cache
-```
-
-Tes lokal memakai SQLite dan respons Casaku tiruan. Transaksi live serta uji konkurensi MySQL tetap wajib sebelum produksi.
+- `products`: tambah kolom `slug`, `category`, dan `image_path` untuk URL, kategori ala marketplace, dan gambar.
+- `orders`: tambah kolom `code`, nomor pesanan yang tampil ke pembeli. Akses tetap dibatasi pemilik.
+- `payments`: tambah kolom `qr_string` untuk menampilkan QR, dan status `refunded`.
+- `audit_logs`: tambah kolom `ip` dan `meta` (JSON, tanpa rahasia).
+- `users`: tambah kolom `balance` (saldo saat ini, `CHECK >= 0`).
+- `orders`: tambah kolom `kind` (`purchase`/`topup`) dan `payment_method` (`qris`/`balance`). Isi saldo memakai alur pesanan + pembayaran QRIS yang sama.
+- Tabel baru `balance_ledger`: riwayat mutasi saldo (jenis, nominal +/-, saldo sesudah). Append-only.
+- Keluhan pesanan belum punya tabel sendiri. Pembeli menghubungi admin lewat email dengan nomor pesanan, dan admin menangani lewat status `review_required`.

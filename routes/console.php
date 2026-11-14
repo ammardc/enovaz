@@ -1,44 +1,37 @@
 <?php
 
-use Illuminate\Foundation\Inspiring;
+use App\Models\User;
+use App\Services\Audit;
+use App\Services\CredentialVault;
+use App\Services\PaymentService;
+use App\Services\Totp;
 use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schedule;
-use App\Services\CasakuClient;
-use App\Services\PaymentSettlement;
 
-Artisan::command('inspire', function () {
-    $this->comment(Inspiring::quote());
-})->purpose('Display an inspiring quote');
+Artisan::command('payments:expire', function (PaymentService $payments) {
+    $released = $payments->expireOverdue();
+    $this->info("{$released} tagihan kedaluwarsa, reservasi stok dilepas.");
+})->purpose('Melepas reservasi stok dari tagihan QRIS yang kedaluwarsa dan dipastikan belum dibayar');
 
-Artisan::command('store:owner {email}', function (string $email) {
-    $user = DB::table('users')->where('email', $email)->first();
-    if (! $user || ! $user->email_verified_at) {
-        $this->error('Akun harus ada dan emailnya sudah terverifikasi.');
+Artisan::command('enovaz:credential-key', function () {
+    $this->line('Salin baris berikut ke file .env (simpan juga cadangannya di tempat aman):');
+    $this->newLine();
+    $this->info('CREDENTIAL_KEY='.CredentialVault::generateKey());
+    $this->newLine();
+    $this->warn('Jika kunci ini hilang atau diganti, kredensial stok yang sudah tersimpan tidak bisa dibuka lagi.');
+})->purpose('Membuat kunci enkripsi kredensial produk');
+
+Artisan::command('enovaz:2fa-reset {username}', function (string $username) {
+    // Hanya dari terminal server (bukan web): untuk admin yang kehilangan HP authenticator.
+    $user = User::where('username', strtolower($username))->first();
+    if (! $user) {
+        $this->error("User {$username} tidak ditemukan.");
+
         return 1;
     }
-    DB::table('users')->where('id', $user->id)->update(['role' => 'owner', 'updated_at' => now()]);
-    DB::table('admin_audit_logs')->insert(['admin_id' => $user->id, 'action' => 'owner_promoted_cli',
-        'subject_type' => 'user', 'subject_id' => $user->id, 'context' => '{}', 'created_at' => now()]);
-    $this->info('Owner aktif: '.$email);
-})->purpose('Promote a verified user to initial owner from server CLI');
+    app(Totp::class)->disable($user);
+    Audit::log('admin.2fa_reset_cli', $user);
+    $this->info("2FA {$user->username} direset. Saat login berikutnya, admin wajib menyetel ulang.");
+})->purpose('Reset 2FA seorang pengguna (mis. HP hilang)');
 
-Artisan::command('store:reconcile', function (CasakuClient $casaku, PaymentSettlement $settlement) {
-    if (! $casaku->configured()) { $this->info('Casaku belum dikonfigurasi.'); return; }
-    $invoices = DB::table('payment_invoices')->where('status', 'pending')->whereNotNull('provider_transaction_id')
-        ->where('created_at', '<', now()->subSeconds(30))->orderBy('id')->limit(30)->get();
-    foreach ($invoices as $invoice) {
-        try {
-            $status = $casaku->status($invoice->provider_transaction_id);
-            if (data_get($status, 'status') === 'paid') {
-                $settlement->paid($invoice->provider_transaction_id, (int) data_get($status, 'amount'),
-                    data_get($status, 'paidAt'), 'reconcile:'.hash('sha256', json_encode($status)));
-            } elseif (in_array(data_get($status, 'status'), ['expired','cancel'], true)) {
-                $settlement->expired($invoice->provider_transaction_id);
-            }
-        } catch (\Throwable $e) { report($e); }
-    }
-    $this->info('Diperiksa: '.$invoices->count().' invoice.');
-})->purpose('Reconcile pending Casaku invoices with provider status');
-
-Schedule::command('store:reconcile')->everyMinute()->withoutOverlapping();
+Schedule::command('payments:expire')->everyMinute()->withoutOverlapping();

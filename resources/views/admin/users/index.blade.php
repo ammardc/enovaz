@@ -1,132 +1,57 @@
-@extends('layouts.admin')
-
-@section('page-title', 'User Management')
-@section('breadcrumb', 'Manage all registered users')
+@extends('layouts.app')
+@section('title', 'Pengguna')
 
 @section('content')
-<!-- Header Action -->
-<div class="flex justify-end items-center mb-6">
-    <a href="{{ route('admin.dashboard') }}" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition">
-        ← Back to Dashboard
-    </a>
-</div>
+@include('admin._nav', ['heading' => 'Pengguna'])
 
-    @if(session('success'))
-    <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
-        {{ session('success') }}
-    </div>
-    @endif
+<form method="GET" class="mb-4 flex gap-2">
+    <input name="q" value="{{ $q }}" maxlength="32" placeholder="Cari username" class="input w-56">
+    <button class="btn btn-ghost">Cari</button>
+</form>
 
-    @if(session('error'))
-    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-        {{ session('error') }}
-    </div>
-    @endif
-
-    <!-- Filters -->
-    <div class="bg-white rounded-lg shadow-md p-4 mb-6">
-        <form method="GET" class="flex gap-4">
-            <select name="filter" class="border border-gray-300 rounded-lg px-4 py-2">
-                <option value="">All Users</option>
-                <option value="active" {{ request('filter') === 'active' ? 'selected' : '' }}>Active Only</option>
-                <option value="inactive" {{ request('filter') === 'inactive' ? 'selected' : '' }}>Inactive Only</option>
-                <option value="locked" {{ request('filter') === 'locked' ? 'selected' : '' }}>Locked Accounts</option>
-                <option value="admin" {{ request('filter') === 'admin' ? 'selected' : '' }}>Admins Only</option>
-            </select>
-            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg">
-                Filter
-            </button>
-        </form>
-    </div>
-
-    <!-- Users Table -->
-    <div class="bg-white rounded-lg shadow-md overflow-hidden">
-        <table class="min-w-full">
-            <thead class="bg-gray-50">
-                <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Failed Attempts</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Login</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200">
-                @forelse($users as $user)
-                <tr class="hover:bg-gray-50">
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        #{{ $user->id }}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="font-medium text-gray-900">{{ $user->name }}</div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {{ $user->email }}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                            {{ $user->role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800' }}">
-                            {{ ucfirst($user->role) }}
-                        </span>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        @if($user->isLocked())
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
-                                Locked
-                            </span>
-                        @elseif($user->is_active)
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                Active
-                            </span>
-                        @else
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                                Inactive
-                            </span>
-                        @endif
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm">
-                        <span class="px-2 py-1 rounded {{ $user->failed_login_attempts >= 3 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800' }}">
-                            {{ $user->failed_login_attempts }}/5
-                        </span>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {{ $user->last_login_at?->format('Y-m-d H:i') ?? 'Never' }}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <a href="{{ route('admin.users.show', $user) }}" class="text-blue-600 hover:text-blue-900 mr-3">
-                            View
-                        </a>
-                        <a href="{{ route('admin.users.edit', $user) }}" class="text-green-600 hover:text-green-900 mr-3">
-                            Edit
-                        </a>
-                        @if($user->id !== auth()->id())
-                        <form method="POST" action="{{ route('admin.users.delete', $user) }}" class="inline" 
-                            onsubmit="return confirm('Yakin ingin menghapus user ini?')">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="text-red-600 hover:text-red-900">
-                                Delete
-                            </button>
+<div class="table-wrap">
+    <table class="table">
+        <thead><tr><th>Username</th><th>Nama</th><th class="text-right!">Pesanan</th><th class="text-right!">Saldo</th><th>Terdaftar</th><th>Role</th><th>Tambah saldo</th></tr></thead>
+        <tbody>
+        @foreach($users as $u)
+            <tr>
+                <td class="font-semibold">{{ $u->username }}</td>
+                <td>{{ $u->name }}</td>
+                <td class="num text-right">{{ $u->orders_count }}</td>
+                <td class="num text-right">{{ rupiah($u->balance) }}</td>
+                <td class="num">{{ wib($u->created_at, 'd M Y') }}</td>
+                <td>
+                    @if($u->is(auth()->user()))
+                        <span class="pill pill-paid">{{ $u->role }} (kamu)</span>
+                    @else
+                        <form method="POST" action="{{ route('admin.users.role', $u) }}" class="flex items-center gap-2" data-confirm="Ubah role {{ $u->username }}? Tindakan ini dicatat di audit log.">
+                            @csrf @method('PUT')
+                            <select name="role" class="input w-auto py-1.5">
+                                <option value="pembeli" @selected($u->role === 'pembeli')>pembeli</option>
+                                <option value="admin" @selected($u->role === 'admin')>admin</option>
+                            </select>
+                            <button class="btn btn-ghost px-3 py-1.5">Simpan</button>
                         </form>
-                        @endif
-                    </td>
-                </tr>
-                @empty
-                <tr>
-                    <td colspan="8" class="px-6 py-4 text-center text-gray-500">
-                        No users found
-                    </td>
-                </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
-
-    <!-- Pagination -->
-    <div class="mt-6">
-        {{ $users->links() }}
-    </div>
+                    @endif
+                </td>
+                <td>
+                    @if($u->role === 'pembeli')
+                        <form method="POST" action="{{ route('admin.users.credit', $u) }}" class="flex items-center gap-1.5" data-confirm="Tambah saldo {{ $u->username }}? Tindakan ini dicatat di audit log.">
+                            @csrf
+                            <input name="amount" type="number" inputmode="numeric" min="1000" max="{{ config('enovaz.admin_credit_max') }}" step="1000" required placeholder="Nominal" class="input num w-28 py-1.5" aria-label="Nominal saldo untuk {{ $u->username }}">
+                            <input name="note" maxlength="120" required placeholder="Catatan" class="input w-32 py-1.5" aria-label="Catatan">
+                            <button class="btn btn-primary px-3 py-1.5">+</button>
+                        </form>
+                    @else
+                        <span class="text-xs text-muted">-</span>
+                    @endif
+                </td>
+            </tr>
+        @endforeach
+        </tbody>
+    </table>
+</div>
+<p class="mt-2 text-xs text-muted">Mengubah role dan menambah saldo memerlukan konfirmasi password, dan dicatat di audit log.</p>
+@if($errors->has('amount') || $errors->has('note'))<p class="error">{{ $errors->first('amount') ?: $errors->first('note') }}</p>@endif
+<div class="mt-4">{{ $users->links() }}</div>
 @endsection

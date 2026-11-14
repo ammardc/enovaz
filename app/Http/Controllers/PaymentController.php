@@ -2,55 +2,102 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\CasakuClient;
-use App\Services\PaymentSettlement;
-use App\Jobs\ProcessCasakuPayment;
+use App\Models\Order;
+use App\Models\Payment;
+use App\Services\Casaku\CasakuGateway;
+use App\Services\Casaku\FakeCasakuGateway;
+use App\Services\Casaku\GatewayException;
+use App\Services\PaymentService;
+use App\Services\QrSvg;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class PaymentController extends Controller
 {
-    public function show(string $reference)
+    public function show(Request $request, string $code)
     {
-        $invoice = DB::table('payment_invoices')->where('reference', $reference)->where('user_id', auth()->id())->first();
-        abort_unless($invoice, 404);
-        return view('payments.show', compact('invoice'));
+        $order = $this->ownedOrder($request, $code)->load(['items.product', 'payment']);
+
+        if ($order->status !== Order::PENDING || ! $order->payment) {
+            return redirect()->route('orders.show', $order->code);
+        }
+
+        $qr = QrSvg::render($order->payment->qr_string);
+        $simulation = $this->simulationEnabled();
+
+        return response()->view('payments.show', compact('order', 'qr', 'simulation'))
+            ->header('Cache-Control', 'no-store, private');
     }
 
-    public function check(string $reference, CasakuClient $casaku, PaymentSettlement $settlement)
+    public function check(Request $request, string $code, PaymentService $payments)
     {
-        $invoice = DB::table('payment_invoices')->where('reference', $reference)->where('user_id', auth()->id())->first();
-        abort_unless($invoice, 404);
-        if (! $invoice->provider_transaction_id || ! in_array($invoice->status, ['pending','review'], true)) return back();
+        $order = $this->ownedOrder($request, $code)->load('payment');
+        abort_unless($order->payment, 404);
+
         try {
-            $status = $casaku->status($invoice->provider_transaction_id);
-            if (data_get($status, 'status') === 'paid') {
-                $settlement->paid($invoice->provider_transaction_id, (int) data_get($status, 'amount'), data_get($status, 'paidAt'), 'check:'.hash('sha256', json_encode($status)));
-            } elseif (in_array(data_get($status, 'status'), ['expired','cancel'], true)) {
-                $settlement->expired($invoice->provider_transaction_id);
-            }
-        } catch (\Throwable $e) {
+            $result = $payments->verify($order->payment, 'buyer');
+        } catch (GatewayException $e) {
             report($e);
-            return back()->withErrors(['payment' => 'Status belum bisa dipastikan. Silakan coba lagi nanti.']);
+
+            return back()->with('error', 'Gagal cek pembayaran. Coba lagi.');
         }
-        return back()->with('success', 'Status terbaru sudah diperiksa.');
+
+        return match ($result) {
+            Payment::PAID => redirect()->route('orders.show', $order->code)->with('status', 'Pembayaran terverifikasi. Akunmu sudah siap.'),
+            Payment::PENDING => back()->with('error', 'Pembayaran belum masuk.'),
+            Payment::EXPIRED => redirect()->route('orders.show', $order->code)->with('error', 'Tagihan sudah kedaluwarsa dan stok dikembalikan.'),
+            default => redirect()->route('orders.show', $order->code)->with('error', 'Pembayaran perlu diperiksa admin. Kami akan menghubungimu.'),
+        };
     }
 
-    public function webhook(Request $request)
+    /** Hanya mode simulasi lokal: menandai tagihan lunas di FakeCasakuGateway. */
+    public function simulate(Request $request, string $code, CasakuGateway $gateway)
     {
-        $secret = config('store.casaku_secret');
-        $signature = $request->header('X-Casaku-Signature');
+        abort_unless($this->simulationEnabled() && $gateway instanceof FakeCasakuGateway, 404);
+
+        $order = $this->ownedOrder($request, $code)->load('payment');
+        abort_unless($order->payment && $order->status === Order::PENDING, 404);
+
+        $gateway->markPaid($order->payment->gateway_transaction_id);
+
+        return back()->with('status', 'Simulasi: pembayaran '.rupiah($order->payment->expected_amount).' terkirim. Sekarang tekan "Cek status pembayaran".');
+    }
+
+    /**
+     * Webhook Casaku. Tanda tangan HMAC-SHA256 atas body mentah diverifikasi dulu,
+     * lalu status tetap dicek ulang ke API Casaku sebelum stok diserahkan.
+     */
+    public function webhook(Request $request, PaymentService $payments)
+    {
         $raw = $request->getContent();
-        if (! $secret || ! is_string($signature) || ! ctype_xdigit($signature) || strlen($signature) !== 64 ||
-            ! hash_equals(hash_hmac('sha256', $raw, $secret), strtolower($signature))) {
-            return response()->json(['error' => 'Invalid signature'], 401);
+        $secret = (string) config('services.casaku.webhook_secret');
+        $signature = (string) $request->header('x-casaku-signature', '');
+
+        if ($secret === '' || ! hash_equals(hash_hmac('sha256', $raw, $secret), $signature)) {
+            return response()->json(['status' => 'invalid_signature'], 401);
         }
-        $payload = json_decode($raw, true);
-        if (! is_array($payload) || ! is_string($payload['transactionId'] ?? null) ||
-            ($payload['status'] ?? null) !== 'paid' || ! is_int($payload['amount'] ?? null)) {
-            return response()->json(['error' => 'Invalid payload'], 422);
+
+        $data = json_decode($raw, true);
+        $payment = is_array($data) && isset($data['transactionId'])
+            ? Payment::where('gateway_transaction_id', (string) $data['transactionId'])->first()
+            : null;
+
+        if ($payment) {
+            if (isset($data['amount']) && (int) $data['amount'] !== $payment->expected_amount) {
+                $payments->flagReview($payment, 'webhook_amount_mismatch');
+            } else {
+                try {
+                    $payments->verify($payment, 'webhook');
+                } catch (GatewayException $e) {
+                    report($e);
+                }
+            }
         }
-        ProcessCasakuPayment::dispatch($payload['transactionId'], $payload['amount'], $payload['paidAt'] ?? null, hash('sha256', $raw));
-        return response()->json(['ok' => true]);
+
+        return response()->json(['status' => 'success']);
+    }
+
+    private function simulationEnabled(): bool
+    {
+        return config('services.casaku.driver') !== 'live' && app()->environment(['local', 'testing']);
     }
 }

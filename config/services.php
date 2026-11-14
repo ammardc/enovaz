@@ -1,43 +1,16 @@
 <?php
 
 return [
-    'google' => [
-        'client_id' => env('GOOGLE_CLIENT_ID'),
-        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
-        'redirect' => env('GOOGLE_REDIRECT_URI'),
+    'casaku' => [
+        // fake  = simulasi lokal tanpa memanggil Casaku (ditolak di production)
+        // live  = memanggil API Casaku sungguhan
+        'driver' => env('CASAKU_DRIVER', 'fake'),
+        'base_url' => env('CASAKU_BASE_URL', 'https://api.casaku.id'),
+        'license_key' => env('CASAKU_LICENSE_KEY'),
+        'qr_id' => env('CASAKU_QR_ID'),
+        'package_ids' => array_values(array_filter(array_map('trim', explode(',', (string) env('CASAKU_PACKAGE_IDS', 'id.dana'))))),
+        'webhook_secret' => env('CASAKU_WEBHOOK_SECRET'),
+        'expires_minutes' => (int) env('CASAKU_EXPIRES_MINUTES', 15),
+        'prefix' => env('CASAKU_PREFIX', 'ENV'),
     ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Third Party Services
-    |--------------------------------------------------------------------------
-    |
-    | This file is for storing the credentials for third party services such
-    | as Mailgun, Postmark, AWS and more. This file provides the de facto
-    | location for this type of information, allowing packages to have
-    | a conventional file to locate the various service credentials.
-    |
-    */
-
-    'postmark' => [
-        'key' => env('POSTMARK_API_KEY'),
-    ],
-
-    'resend' => [
-        'key' => env('RESEND_API_KEY'),
-    ],
-
-    'ses' => [
-        'key' => env('AWS_ACCESS_KEY_ID'),
-        'secret' => env('AWS_SECRET_ACCESS_KEY'),
-        'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
-    ],
-
-    'slack' => [
-        'notifications' => [
-            'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
-            'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
-        ],
-    ],
-
 ];

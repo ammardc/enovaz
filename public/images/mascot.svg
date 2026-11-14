@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 370 370">
+  <!-- Novi: maskot E-Novaz (ilustrasi orisinal) -->
+  <defs>
+    <radialGradient id="shell" cx="35%" cy="28%" r="80%">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset=".65" stop-color="#f3f4fa"/>
+      <stop offset="1" stop-color="#dfe2ee"/>
+    </radialGradient>
+    <radialGradient id="visor" cx="35%" cy="25%" r="90%">
+      <stop offset="0" stop-color="#3a3560"/>
+      <stop offset=".55" stop-color="#1f1b3a"/>
+      <stop offset="1" stop-color="#120f24"/>
+    </radialGradient>
+    <radialGradient id="coral" cx="35%" cy="30%" r="75%">
+      <stop offset="0" stop-color="#ffb08a"/>
+      <stop offset="1" stop-color="#ff6a4d"/>
+    </radialGradient>
+    <radialGradient id="mint" cx="35%" cy="30%" r="80%">
+      <stop offset="0" stop-color="#9ff5e3"/>
+      <stop offset="1" stop-color="#22c3a6"/>
+    </radialGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2.5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- kaki -->
+  <rect x="140" y="300" width="38" height="50" rx="19" fill="url(#shell)" stroke="#e1e4ef" stroke-width="1.5"/>
+  <rect x="188" y="300" width="38" height="50" rx="19" fill="url(#shell)" stroke="#e1e4ef" stroke-width="1.5"/>
+
+  <!-- lengan kiri (melambai) -->
+  <ellipse cx="100" cy="210" rx="21" ry="40" transform="rotate(-38 100 210)" fill="url(#shell)" stroke="#e1e4ef" stroke-width="1.5"/>
+  <circle cx="76" cy="174" r="19" fill="url(#coral)"/>
+
+  <!-- badan -->
+  <rect x="116" y="182" width="134" height="140" rx="58" fill="url(#shell)" stroke="#e1e4ef" stroke-width="1.5"/>
+  <path d="M134 250q6 44 34 62M232 250q-6 44-34 62" fill="none" stroke="#d6daea" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="183" cy="240" r="22" fill="#fff7e6"/>
+  <path d="M188 226 175 244h10l-3 15 14-20h-10z" fill="#ffb020"/>
+
+  <!-- lengan kanan -->
+  <ellipse cx="258" cy="236" rx="19" ry="36" transform="rotate(-62 258 236)" fill="url(#shell)" stroke="#e1e4ef" stroke-width="1.5"/>
+
+  <!-- ponsel -->
+  <g transform="rotate(12 306 210)">
+    <rect x="268" y="132" width="80" height="142" rx="17" fill="#221d3d"/>
+    <rect x="275" y="141" width="66" height="124" rx="11" fill="#ffffff"/>
+    <!-- bingkai scan -->
+    <g fill="none" stroke="#ff7a59" stroke-width="3.5" stroke-linecap="round">
+      <path d="M284 162v-8h8M332 162v-8h-8M284 202v8h8M332 202v8h-8"/>
+    </g>
+    <!-- QR -->
+    <g fill="#221d3d">
+      <rect x="291" y="161" width="12" height="12" rx="2"/><rect x="313" y="161" width="12" height="12" rx="2"/>
+      <rect x="291" y="183" width="12" height="12" rx="2"/>
+      <rect x="307" y="178" width="5" height="5"/><rect x="315" y="185" width="5" height="5"/><rect x="321" y="178" width="5" height="5"/>
+      <rect x="307" y="190" width="5" height="5"/><rect x="321" y="191" width="5" height="5"/>
+    </g>
+    <g fill="#fff"><rect x="295" y="165" width="4" height="4"/><rect x="317" y="165" width="4" height="4"/><rect x="295" y="187" width="4" height="4"/></g>
+    <rect x="287" y="224" width="42" height="7" rx="3.5" fill="#eceef6"/>
+    <rect x="287" y="236" width="28" height="7" rx="3.5" fill="#eceef6"/>
+  </g>
+  <circle cx="281" cy="250" r="18" fill="url(#coral)"/>
+  <!-- centang -->
+  <circle cx="346" cy="138" r="19" fill="#22c55e" stroke="#fff" stroke-width="4.5"/>
+  <path d="M337 138l6.5 6.5 11-12" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- antena -->
+  <path d="M183 44V22" stroke="#cdd2e3" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="183" cy="17" r="11" fill="url(#coral)"/>
+
+  <!-- telinga -->
+  <rect x="68" y="92" width="30" height="62" rx="15" fill="url(#mint)"/>
+  <rect x="268" y="92" width="30" height="62" rx="15" fill="url(#mint)"/>
+
+  <!-- kepala -->
+  <rect x="86" y="40" width="194" height="152" rx="72" fill="url(#shell)" stroke="#e1e4ef" stroke-width="1.5"/>
+  <rect x="106" y="66" width="154" height="96" rx="42" fill="url(#visor)"/>
+  <path d="M124 82c12-8 30-11 46-8" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".16" fill="none"/>
+  <!-- wajah -->
+  <g filter="url(#glow)" fill="none" stroke="#5ef2d6" stroke-linecap="round">
+    <path d="M138 120q15-18 30 0" stroke-width="8"/>
+    <path d="M198 120q15-18 30 0" stroke-width="8"/>
+    <path d="M170 136q13 11 26 0" stroke-width="5"/>
+  </g>
+  <!-- pipi -->
+  <ellipse cx="116" cy="172" rx="12" ry="7" fill="#ffb3b3" opacity=".7"/>
+  <ellipse cx="250" cy="172" rx="12" ry="7" fill="#ffb3b3" opacity=".7"/>
+</svg>

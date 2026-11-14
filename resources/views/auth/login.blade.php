@@ -1,20 +1,28 @@
 @extends('layouts.app')
-@section('title','Masuk')
+@section('title', 'Masuk')
+
 @section('content')
-<div class="auth-wrap">
+<div class="mx-auto max-w-md">
     <div class="panel">
-        <h1>Masuk</h1>
-        <form method="post" action="{{ route('login') }}" class="form-grid">
+        <h1 class="mb-6 text-2xl font-semibold tracking-tight">Masuk</h1>
+
+        <form method="POST" action="{{ route('login') }}" class="space-y-4" data-once>
             @csrf
-            <div class="form-field"><label for="username">Username</label><input class="form-control" id="username" name="username" type="text" value="{{ old('username') }}" autocomplete="username" required></div>
-            <div class="form-field"><label for="password">Kata sandi</label><input class="form-control" id="password" name="password" type="password" autocomplete="current-password" required></div>
-            <div class="auth-options"><label><input name="remember" type="checkbox"> Ingat saya</label><a class="text-link" href="{{ route('password.request') }}">Lupa kata sandi?</a></div>
-            <button class="button full">Masuk</button>
+            <div>
+                <label for="username" class="label">Username</label>
+                <input id="username" name="username" value="{{ old('username') }}" class="input" autocomplete="username" maxlength="32" required autofocus>
+                @error('username')<p class="error">{{ $message }}</p>@enderror
+            </div>
+            <div>
+                <label for="password" class="label">Password</label>
+                <input id="password" name="password" type="password" class="input" autocomplete="current-password" maxlength="128" required>
+                @error('password')<p class="error">{{ $message }}</p>@enderror
+            </div>
+            @include('partials.captcha')
+            <button type="submit" class="btn btn-primary w-full py-3">Masuk</button>
         </form>
-        @if(config('services.google.client_id') && config('services.google.client_secret'))
-            <div class="divider">atau</div><a class="button secondary full" href="{{ route('google.redirect') }}">Lanjutkan dengan Google</a>
-        @endif
-        <div class="auth-switch">Belum punya akun? <a class="text-link" href="{{ route('register') }}">Daftar</a></div>
+
+        <p class="mt-5 text-center text-sm text-muted">Belum punya akun? <a href="{{ route('register') }}" class="font-semibold text-brand-600">Daftar</a></p>
     </div>
 </div>
 @endsection

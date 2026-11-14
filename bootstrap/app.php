@@ -10,16 +10,27 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
-    ->withMiddleware(function (Middleware $middleware): void {
-        // cloudflared forwards HTTPS requests from the loopback interface.
-        $middleware->trustProxies(at: ['127.0.0.1', '::1']);
-        $middleware->validateCsrfTokens(except: ['webhook/casaku']);
+    ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
-            'admin' => \App\Http\Middleware\AdminMiddleware::class,
-            'admin.2fa' => \App\Http\Middleware\EnsureAdminTwoFactor::class,
-            'not.blocked' => \App\Http\Middleware\EnsureNotBlocked::class,
+            'role' => \App\Http\Middleware\EnsureRole::class,
+            'reauth' => \App\Http\Middleware\RequireRecentPassword::class,
+            '2fa' => \App\Http\Middleware\RequireTwoFactor::class,
+        ]);
+
+        // Webhook Casaku diverifikasi dengan HMAC, bukan token CSRF.
+        $middleware->validateCsrfTokens(except: ['webhooks/casaku']);
+
+        $middleware->redirectGuestsTo(fn () => route('login'));
+        $middleware->redirectUsersTo(fn () => route('home'));
+
+        // Header keamanan untuk SEMUA respons (termasuk 404/405 yang terjadi sebelum grup web).
+        $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
+
+        $middleware->web(append: [
+            // Sesi yang hash password-nya sudah usang (password diganti) otomatis dikeluarkan.
+            \Illuminate\Session\Middleware\AuthenticateSession::class,
         ]);
     })
-    ->withExceptions(function (Exceptions $exceptions): void {
+    ->withExceptions(function (Exceptions $exceptions) {
         //
     })->create();

@@ -2,108 +2,66 @@
 
 namespace App\Models;
 
-use Database\Factories\UserFactory;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    public const ROLE_PEMBELI = 'pembeli';
+    public const ROLE_ADMIN = 'admin';
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
-    protected $fillable = [
-        'name',
-        'username',
-        'email',
-        'password',
-        'role',
-        'is_active',
-        'last_login_at',
-        'failed_login_attempts',
-        'locked_until',
-    ];
+    // "role" sengaja TIDAK fillable: nilai role dari formulir tidak pernah dipercaya.
+    protected $fillable = ['name', 'username', 'password_hash'];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
-    protected $hidden = [
-        'password',
-        'remember_token',
-    ];
+    protected $hidden = ['password_hash', 'totp_secret_enc', 'totp_last_step'];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
+    protected $attributes = ['role' => self::ROLE_PEMBELI];
+
+    // Kolom hash password sesuai rancangan basis data.
+    protected $authPasswordName = 'password_hash';
+
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-            'last_login_at' => 'datetime',
-            'locked_until' => 'datetime',
-            'is_active' => 'boolean',
+            'password_hash' => 'hashed',
+            'balance' => 'integer',
+            'totp_enabled_at' => 'datetime',
+            'totp_last_step' => 'integer',
         ];
     }
 
-    /**
-     * Check if user is admin
-     */
+    public function getRememberTokenName()
+    {
+        return ''; // fitur "ingat saya" tidak dipakai
+    }
+
+    /** 2FA aktif (kolom totp_* tidak fillable; hanya diubah lewat App\Services\Totp). */
+    public function hasTwoFactor(): bool
+    {
+        return $this->totp_enabled_at !== null && ! empty($this->totp_secret_enc);
+    }
+
+    /** Aturan password sesuai role: admin lebih panjang (target utama penyerang). */
+    public function passwordRule(): \Illuminate\Validation\Rules\Password
+    {
+        return $this->isAdmin()
+            ? \Illuminate\Validation\Rules\Password::min((int) config('enovaz.password_min.admin', 16))->letters()->numbers()
+            : \Illuminate\Validation\Rules\Password::defaults();
+    }
+
     public function isAdmin(): bool
     {
-        return $this->role === 'admin';
+        return $this->role === self::ROLE_ADMIN;
     }
 
-    /**
-     * Check if account is locked
-     */
-    public function isLocked(): bool
+    public function orders(): HasMany
     {
-        return $this->locked_until && $this->locked_until->isFuture();
+        return $this->hasMany(Order::class);
     }
 
-    /**
-     * Increment failed login attempts
-     */
-    public function incrementFailedAttempts(): void
+    /** Riwayat mutasi saldo. "balance" sengaja tidak fillable: hanya diubah lewat BalanceService. */
+    public function ledger(): HasMany
     {
-        $this->increment('failed_login_attempts');
-        
-        // Lock account after 5 failed attempts for 30 minutes
-        if ($this->failed_login_attempts >= 5) {
-            $this->update(['locked_until' => now()->addMinutes(30)]);
-        }
-    }
-
-    /**
-     * Reset failed login attempts
-     */
-    public function resetFailedAttempts(): void
-    {
-        $this->update([
-            'failed_login_attempts' => 0,
-            'locked_until' => null,
-            'last_login_at' => now(),
-        ]);
-    }
-
-    /**
-     * Unlock account manually (admin only)
-     */
-    public function unlock(): void
-    {
-        $this->update([
-            'failed_login_attempts' => 0,
-            'locked_until' => null,
-        ]);
+        return $this->hasMany(BalanceEntry::class);
     }
 }

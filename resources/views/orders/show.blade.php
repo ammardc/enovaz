@@ -1,60 +1,97 @@
 @extends('layouts.app')
-@section('title','Pesanan '.$order->number)
+@section('title', 'Pesanan '.$order->code)
+
 @section('content')
-<a class="back-link" href="{{ route('orders.index') }}">@include('partials.icon',['name'=>'back']) Kembali ke Orders</a>
-<div class="section-head" style="margin-top:0">
-    <div><span class="eyebrow">Detail pesanan</span><h1 class="page-title">{{ $order->number }}</h1></div>
-    <span class="status-pill {{ $order->status }}">{{ ['waiting_payment'=>'Menunggu pembayaran','processing'=>'Diproses','complete'=>'Selesai','expired'=>'Kedaluwarsa','review'=>'Perlu pemeriksaan','refund_processing'=>'Refund diproses','refunded'=>'Dikembalikan'][$order->status] ?? $order->status }}</span>
-</div>
-<div class="two-col">
+@php($payment = $order->payment)
+<nav class="mb-4 text-sm text-muted"><a href="{{ route('orders.index') }}" class="hover:text-brand-600">Pesanan Saya</a> / <span class="font-mono">{{ $order->code }}</span></nav>
+
+<div class="grid items-start gap-5 lg:grid-cols-2">
     <div class="panel">
-        <h2>{{ $item->product_name }}</h2>
-        <div class="summary-line"><span>Paket</span><strong>{{ $item->variant_name }}</strong></div>
-        <div class="summary-line"><span>Jumlah</span><strong>{{ $item->quantity }}</strong></div>
-        <div class="summary-line"><span>Metode bayar</span><strong>{{ $order->payment_method === 'wallet' ? 'Saldo E-Novaz' : 'QRIS Casaku' }}</strong></div>
-        <div class="summary-line total"><span>Total</span><strong>Rp{{ number_format($order->total_idr,0,',','.') }}</strong></div>
-        @if(in_array($order->status,['complete','refund_processing']))
-            <div class="notice" style="margin-top:18px">Akses digital sudah siap. Tampilkan hanya di perangkat pribadi dan jangan bagikan kredensialnya.</div>
-            @if(isset($access))
-                <div class="list-rows" style="margin-top:18px">
-                    @foreach($access as $index=>$unit)
-                        <div class="panel" style="background:#fbf9ff"><strong>Unit {{ $index+1 }}</strong>
-                            @foreach($unit as $key=>$value)
-                                <div class="summary-line"><span>{{ ucfirst(str_replace('_',' ',$key)) }}</span><strong style="word-break:break-all">{{ $value }}</strong></div>
-                            @endforeach
+        <div class="flex flex-wrap items-center justify-between gap-2">
+            <h1 class="text-xl font-semibold tracking-tight">{{ $order->isTopup() ? 'Isi saldo' : 'Pesanan' }}</h1>
+            <span class="pill {{ $order->statusClass() }}">{{ $order->statusLabel() }}</span>
+        </div>
+
+        @foreach($order->items as $item)
+            <div class="mt-4 grid grid-cols-[56px_1fr] items-center gap-4">
+                <div class="overflow-hidden rounded-xl">@include('partials.thumb', ['product' => $item->product, 'class' => 'aspect-square', 'text' => 'text-lg', 'compact' => true])</div>
+                <div><h2 class="font-bold">{{ $item->product->name }} × {{ $item->quantity }}</h2><p class="text-sm text-muted">{{ $item->product->duration }} · {{ rupiah($item->unit_price) }} / akun</p></div>
+            </div>
+        @endforeach
+
+        <dl class="num mt-5 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
+            <dt class="text-muted">No. pesanan</dt><dd class="font-mono font-semibold">{{ $order->code }}</dd>
+            <dt class="text-muted">Dibuat</dt><dd class="font-semibold">{{ wib($order->created_at) }} WIB</dd>
+            @if($payment)
+                <dt class="text-muted">Harga</dt><dd class="font-semibold">{{ rupiah($payment->base_amount) }}</dd>
+                <dt class="text-muted">Kode unik</dt><dd class="font-semibold">{{ rupiah($payment->uniqueCode()) }}</dd>
+                <dt class="text-muted">Total</dt><dd class="font-semibold tracking-tight">{{ rupiah($payment->expected_amount) }}</dd>
+                @if($payment->paid_at)<dt class="text-muted">Dibayar</dt><dd class="font-semibold">{{ wib($payment->paid_at) }} WIB</dd>@endif
+            @endif
+            @if(! $payment)
+                <dt class="text-muted">Total</dt><dd class="font-semibold tracking-tight">{{ rupiah($order->total) }}</dd>
+            @endif
+            <dt class="text-muted">Metode</dt><dd class="font-semibold">{{ $order->methodLabel() }}</dd>
+        </dl>
+    </div>
+
+    <div class="panel">
+        @if($order->isTopup())
+        <h2 class="text-lg font-semibold tracking-tight">Saldo</h2>
+        @if($order->status === 'paid')
+            <div class="mt-4 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Saldo bertambah {{ rupiah($payment?->expected_amount ?? $order->total) }}.</div>
+            <a href="{{ route('balance.index') }}" class="btn btn-soft mt-3">Lihat saldo</a>
+        @elseif($order->status === 'expired')
+            <div class="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">Tagihan kedaluwarsa. Sudah bayar? Tekan cek lagi atau hubungi admin.</div>
+        @elseif($order->status === 'review_required')
+            <div class="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">Pembayaran sedang ditinjau admin.</div>
+        @else
+            <div class="mt-4 rounded-xl bg-slate-100 px-4 py-3 text-sm text-slate-700">Dibatalkan.</div>
+        @endif
+        @else
+        <h2 class="text-lg font-semibold tracking-tight">Akun produk</h2>
+
+        @if($order->status === 'paid')
+            @if($credentials)
+                <div class="mt-4 space-y-3">
+                    @foreach($credentials as $i => $c)
+                        <div class="rounded-xl bg-canvas p-4">
+                            <p class="mb-2 text-xs font-bold tracking-wide text-muted uppercase">Akun {{ $i + 1 }}{{ $c['product'] ? ' · '.$c['product'] : '' }}</p>
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <div class="min-w-0"><span class="block text-xs text-muted">Email / username</span><code id="email-{{ $i }}" class="font-mono text-sm break-all">{{ $c['email'] }}</code></div>
+                                <button type="button" class="btn btn-soft" data-copy="{{ $c['email'] }}" data-copy-target="email-{{ $i }}">Salin</button>
+                            </div>
+                            <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
+                                <div class="min-w-0"><span class="block text-xs text-muted">Password</span><code id="pass-{{ $i }}" class="font-mono text-sm break-all">{{ $c['password'] }}</code></div>
+                                <button type="button" class="btn btn-soft" data-copy="{{ $c['password'] }}" data-copy-target="pass-{{ $i }}">Salin</button>
+                            </div>
                         </div>
                     @endforeach
                 </div>
+                <p class="mt-3 text-xs text-muted">Jangan bagikan halaman ini.</p>
             @else
-                <form method="post" action="{{ route('orders.reveal',$order->number) }}" style="margin-top:18px">@csrf<button class="button">Tampilkan akses</button></form>
+                <div class="mt-4 rounded-xl bg-canvas p-4">
+                    <p class="flex items-start gap-3 text-sm text-muted">
+                        <svg class="mt-0.5 size-5 shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1a5 5 0 0 0-5 5v4H5v13h14V10h-2V6a5 5 0 0 0-5-5zm-3 9V6a3 3 0 0 1 6 0v4z"/></svg>
+                        Pastikan tidak ada yang melihat layarmu.
+                    </p>
+                    <form method="POST" action="{{ route('orders.reveal', $order->code) }}" class="mt-3">
+                        @csrf
+                        <button type="submit" class="btn btn-primary">Tampilkan akun</button>
+                    </form>
+                </div>
             @endif
-        @endif
-        @if($invoice && $invoice->status === 'pending')
-            <a class="button" href="{{ route('payments.show',$invoice->reference) }}" style="margin-top:18px">Lihat tagihan QRIS</a>
-        @endif
-    </div>
-    <div class="panel">
-        <h2>Butuh bantuan?</h2>
-        <p class="small-note">Sertakan nomor pesanan agar tim kami dapat membantu lebih cepat.</p>
-        <button class="button secondary" type="button" onclick="navigator.clipboard.writeText(@js($order->number)); this.textContent='Nomor disalin'">Salin nomor pesanan</button>
-        @if(config('store.telegram_url'))
-            <a class="action-tile" style="margin-top:15px" href="{{ config('store.telegram_url') }}" target="_blank" rel="noopener noreferrer">Hubungi Telegram resmi @include('partials.icon',['name'=>'arrow'])</a>
+        @elseif($order->status === 'expired')
+            <div class="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">Tagihan kedaluwarsa. Sudah bayar? Hubungi admin.</div>
+        @elseif($order->status === 'review_required')
+            <div class="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">Pembayaran sedang ditinjau admin.</div>
         @else
-            <p class="small-note">Kanal Telegram resmi akan ditambahkan pemilik toko.</p>
+            <div class="mt-4 rounded-xl bg-slate-100 px-4 py-3 text-sm text-slate-700">Pesanan ini dibatalkan.</div>
         @endif
-        @if($order->status==='complete')
-            <details style="margin-top:22px"><summary class="text-link" style="cursor:pointer">Ajukan refund</summary>
-                <form method="post" action="{{ route('orders.refund',$order->number) }}" class="form-grid" style="margin-top:15px">@csrf
-                    <div class="form-field"><label>Alasan</label><textarea class="form-control" name="reason" rows="3" minlength="10" required></textarea></div>
-                    <button class="button secondary">Kirim pengajuan</button>
-                </form>
-            </details>
         @endif
+
+        <h3 class="mt-6 font-bold">Ada kendala?</h3>
+        <p class="mt-1 text-sm text-muted">{{ config('enovaz.support.email') }} · sertakan <span class="font-mono">{{ $order->code }}</span></p>
     </div>
-</div>
-<div class="panel" style="margin-top:22px"><h2>Riwayat status</h2>
-    @foreach($timeline as $event)
-        <div class="summary-line"><div><strong>{{ ['waiting_payment'=>'Menunggu pembayaran','processing'=>'Diproses','complete'=>'Selesai','expired'=>'Kedaluwarsa','review'=>'Perlu pemeriksaan','refund_processing'=>'Refund diproses','refunded'=>'Dikembalikan'][$event->status] ?? $event->status }}</strong>@if($event->note)<div class="small muted">{{ $event->note }}</div>@endif</div><span class="small muted">{{ \Carbon\Carbon::parse($event->created_at)->timezone('Asia/Jakarta')->format('d M Y H:i') }} WIB</span></div>
-    @endforeach
 </div>
 @endsection
