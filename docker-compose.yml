@@ -1,0 +1,106 @@
+name: enovaz-docker
+
+services:
+  # PHP-FPM + Nginx (Supervisor) — aplikasi Laravel
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: enovaz-app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+      - ./storage:/var/www/html/storage
+      - ./bootstrap/cache:/var/www/html/bootstrap/cache
+    ports:
+      - "8000:80"
+    networks:
+      - enovaz-network
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # MariaDB
+  db:
+    image: mariadb:11.2
+    container_name: enovaz-db
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootsecret}
+    volumes:
+      - db-data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    networks:
+      - enovaz-network
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --default-storage-engine=InnoDB
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # Scheduler Laravel (payments:expire setiap menit)
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: enovaz-scheduler
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+    networks:
+      - enovaz-network
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      sh -c "while true; do
+        php artisan schedule:run --verbose --no-interaction;
+        sleep 60;
+      done"
+
+  # MailHog untuk uji email lokal
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: enovaz-mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Web UI
+    networks:
+      - enovaz-network
+
+  # phpMyAdmin — dashboard database
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: enovaz-phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      PMA_USER: ${DB_MIGRATOR_USERNAME:-enovaz_migrator}
+      PMA_PASSWORD: ${DB_MIGRATOR_PASSWORD:-MigratorDevSecret123}
+      UPLOAD_LIMIT: 64M
+    ports:
+      - "8081:80"
+    networks:
+      - enovaz-network
+    depends_on:
+      db:
+        condition: service_healthy
+
+networks:
+  enovaz-network:
+    driver: bridge
+
+volumes:
+  # Nama eksplisit agar volume lama (data MariaDB) tetap terpakai.
+  db-data:
+    name: enovaz-docker_db-data
+    driver: local
